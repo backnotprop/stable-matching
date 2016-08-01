@@ -142,7 +142,7 @@ var StableMatching = (function (data) {
 		while(!stable) {
 			let start = indexWithMultipleRemain();
 
-			let p = _DB[start].choices[1] != undefined ?_DB[_DB[start].choices[1].id] : _DB[_DB[start].choices[_DB[_DB[start].choices.length - 1 ].id]]; // second remaining preference of starting person i
+			let p = _DB[start].choices[1] != undefined ? _DB[_DB[start].choices[1].id] : _DB[_DB[start].choices[_DB[_DB[start].choices.length - 1 ].id]]; // second remaining preference of starting person i
 			let q = _DB[p.choices[p.choices.length - 1 ].id]; // last remaining preference of p
 			
 			let currentPair = [p,q];
@@ -155,23 +155,24 @@ var StableMatching = (function (data) {
 				// make sure there is at least one element in the choices remaining
 				if(q.choices.length === 0) {
 					// this element needs to be removed and all preferences indicating it
-					eliminateFromPool(q.id);
+					deleteFromPool(q.id);
 					cycleCancled = true;
 				} else {
 					p = q.choices[1] != undefined ? _DB[q.choices[1].id] : _DB[q.choices[q.choices.length - 1 ].id]; 
 					q = _DB[p.choices[p.choices.length - 1 ].id];
 
 					let newPair = [p,q];
-					cyclePairs.push(newPair);
-
-					if(newPair[0].id == currentPair[0].id) {
-						console.log("CYCLE OCCURED")
-						cycle = true;
-						// TODO remove diagnals in cyclePairs
-						eliminateDiagnals(cyclePairs)
+					
+					let spotCycle = _.findIndex(cyclePairs, function(p) { return p[0].id == p.id; });
+					if ( spotCycle == -1 ) {
+						cyclePairs.push(newPair);
 					} else {
-						console.log(cyclePairs.length)
+						cycle = true;
+						// cycle pairs should start where the cycle was found
+						cyclePairs.splice(0,spotCycle)
+						eliminateDiagnals(cyclePairs)
 					}
+
 				}
 
 			}
@@ -187,31 +188,26 @@ var StableMatching = (function (data) {
 		let start = false;
 		_.forIn(_DB, (person,key) => {
 			if( person.choices.length > 1 ) {
-				start =  key; 
+				start = key; 
 			}
 		});
-		console.log("START ===> " + start)
 		return start;
 	}
 
-	function eliminateFromPool(rid) {
+	function deleteFromPool(rid) {
 		_REMOVED[rid] = _.cloneDeep(_DB[rid]);
 		delete _DB[rid];
 		_.forIn(_DB, (person,i) => {
 			let remove = _.findIndex(person.choices, function(p) { return p.id == rid; });
-			person.choices = person.choices.splice(remove, 1);
-		})
-
+			person.choices.splice(remove, 1);
+		});
 	}
 
 	function eliminateDiagnals(pairs) {
-		for(let i = 0; i<pairs.length; i++) {
-				// first index doesnt have a diagnal match
-				if(i != 0) {
-					// the - 1 creates the diagnal effect
-					_DB[pairs[i][0].id].choices = _.remove(_DB[pairs[i][0].id].choices, c => {return c.id == pairs[i - 1][1].id;});
-					_DB[pairs[i - 1][1].id].choices = _.remove(_DB[pairs[i][0].id].choices, c => {return c.id == pairs[i][0].id;});
-				}
+		// start at second element for diagnal rejection
+		for(let i = 1; i < pairs.length; i++) {
+			// the [i - 1][1] creates the diagnal effect
+			eliminateChoices(_DB[pairs[i][0].id],_DB[pairs[i - 1][1].id]);
 		}
 	}
 
@@ -221,7 +217,7 @@ var StableMatching = (function (data) {
 			if(person.choices.length > 1) {
 				stable = false;
 			}
-		})
+		});
 		return stable;
 	}
 
@@ -259,7 +255,7 @@ StableMatching.init(personPreferredLists);
 StableMatching.doStageOne();
 // StableMatching.testStageOne();
 StableMatching.doStageTwo();
-// StableMatching.doStageThree();
+StableMatching.doStageThree();
 fs.appendFile('/Users/ramboramos/Documents/__RESULTS__.json', JSON.stringify(StableMatching.getFinalMatches()), (err) => {
 	if (err) throw err;
 });
