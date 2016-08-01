@@ -158,27 +158,46 @@ var StableMatching = (function (data) {
 		let i = 1;
 		// all or nothing phase 
 		while(!stable) {
-			let p = _DB[i].choices[1] // second remaining preference of starting person i
-			let q = p.choices[p.choices.length -1 ] // last remaining preference of p
+			let p = _DB[_DB[i].choices[1].id]; // second remaining preference of starting person i
+			let q = _DB[p.choices[p.choices.length -1 ].id]; // last remaining preference of p
 			let currentPair = [p,q];
-			let cyclePairs = [];
+			let cyclePairs = [currentPair]; // first pair in cycle
 			// cyclic reduction
 			let cycle = false;
 			while(!cycle) {
-				p = q.choices[1]; 
-				q = p.choices[p.choices.length -1 ];
+				p = _DB[q.choices[1].id]; 
+				q = _DB[p.choices[p.choices.length -1 ].id];
 				let newPair = [p,q];
 				cyclePairs.push(newPair);
 
 				if(newPair == currentPair) {
 					cycle = true;
-					// TODO remove dyagnals in cyclePairs
+					// TODO remove diagnals in cyclePairs
+					eliminateDiagnals(cyclePairs)
 				}
 			}
 
 			// TODO if everyone has 1 remainging match then stable
+			stable = stabilityCheck();
 			
+		};
+
+	}
+
+	function eliminateDiagnals(pairs) {
+		for(let i = 0; i<pairs.length; i++) {
+				// first index doesnt have a diagnal match
+				if(i != 0) {
+					let lastDex =  _.findIndex(_DB[pairs[i][0].id].choices, function(p) { return p.id == pairs[i][1].id; });
+					pairs[i][0].id].choices.length = lastDex + 1;
+					let lastPrevDex = _.findIndex(_DB[pairs[i][1].id].choices, function(p) { return p.id == pairs[i][0].id; });
+					pairs[i][1].id].choices.length = lastPrevDex + 1;
+				}
 		}
+	}
+
+	function stabilityCheck() {
+
 	}
 
 	
