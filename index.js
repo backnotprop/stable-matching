@@ -37,7 +37,10 @@ function parseDb(db) {
 				});
 			}
 		};
-		
+
+
+		output[db[i].id].choices = _.sortBy(output[db[i].id].choices, o => { return o.strength; });
+
 		i++;
 	};	
 
@@ -45,23 +48,13 @@ function parseDb(db) {
 }
 
 
-
-
 var StableMatching = (function (data) {
 	let _DB = data;
 	
-	function _proposalStage(_DB, refresh){
+	function _proposalStage(iteration){
 		let allProposed = false;
 		let stable = false;
 		let i = 1;
-
-		if(refresh) {
-			_.forIn(_DB, (obj,key) => {
-				_.each(_DB[key].choices, c => {
-					c.offerSent = false;
-				});
-			})
-		}
 
 		while(!allProposed) {
 			let sender = _DB[i];
@@ -72,8 +65,8 @@ var StableMatching = (function (data) {
 			} else {
 				// need to go through proposal stages for this person and their preferences
 				// next offer is first choice in preference list that hasn't been proposed to yet
-				let nextOfferIndex = _.findIndex(sender.choices, function(p) { return !p.offerSent; });	
-				sender.choices[nextOfferIndex].offerSent = true;
+				let nextOfferIndex = _.findIndex(sender.choices, p => { return !p['offerSent'+iteration]; });	
+				sender.choices[nextOfferIndex]['offerSent'+iteration] = true;
 				// send offer to that person, proposeOffer will accept or reject the offer
 				let accepted  = proposalProcess( sender, _DB[sender.choices[nextOfferIndex].id], sender.choices[nextOfferIndex].strength );
 				if (accepted) {
@@ -83,7 +76,7 @@ var StableMatching = (function (data) {
 			}
 
 			// status check to see if everyone has an accepted proposal
-			let statusCheck = _.findKey(_DB, function(o) { return !o.hasAcceptedProposal; });
+			let statusCheck = _.findKey(_DB, o => { return !o.hasAcceptedProposal; });
 			if(!statusCheck) {
 				allProposed = true;
 				stable = true;
@@ -97,14 +90,14 @@ var StableMatching = (function (data) {
 		};
 
 		if(!stable) {
-			_proposalStage(_DB,true);
+			_proposalStage(iteration++);
 		}
 	}
 
 	function proposalProcess(sender, receiver, receiverRank) {
 		// we now need to check to see if the receiver has accepted proposals and 
 		// how the receiver ranks the sender of the proposal 
-		let indexOfsender = _.findIndex(receiver.choices, function(p) { return p.id == sender.id; });
+		let indexOfsender = _.findIndex(receiver.choices, p => { return p.id == sender.id; });
 		if( indexOfsender == -1 ) {
 			// rejected because they are not in the list
 			return false;
@@ -120,7 +113,7 @@ var StableMatching = (function (data) {
 				} else {
 					// accepted because the sender outranks the previously accepted proposal
 					// the previous proposal now needs to be denied
-					let prevIndex = _.findIndex(receiver.choices, function(p) { return p.strength == receiver.acceptedRank; });
+					let prevIndex = _.findIndex(receiver.choices, p => { return p.strength == receiver.acceptedRank; });
 					rejectOffer(_DB[receiver.acceptedID], receiver);
 					acceptOffer(sender, receiver, receiverRank, senderRank);
 					return true;
@@ -153,19 +146,57 @@ var StableMatching = (function (data) {
 		}
 	}
 
+	function _eliminateStage() {
+		_.forIn(_DB, (person,id) => {
+			let keepLast = _.findIndex(person.choices, function(p) { return p.id == person.acceptedID; });
+			person.choices.length = (keepLast + 1);
+		});
+	}
+
+	function cycleReduceStage() {
+		let stable = false;
+		let i = 1;
+		// all or nothing phase 
+		while(!stable) {
+			let p = _DB[i].choices[1] // second remaining preference of starting person i
+			let q = p.choices[p.choices.length -1 ] // last remaining preference of p
+			let currentPair = [p,q];
+			let cyclePairs = [];
+			// cyclic reduction
+			let cycle = false;
+			while(!cycle) {
+				p = q.choices[1]; 
+				q = p.choices[p.choices.length -1 ];
+				let newPair = [p,q];
+				cyclePairs.push(newPair);
+
+				if(newPair == currentPair) {
+					cycle = true;
+					// TODO remove dyagnals in cyclePairs
+				}
+			}
+
+			// TODO if everyone has 1 remainging match then stable
+			
+		}
+	}
+
 	
 	return {	
 		init: function(db) {
 			_DB = db;
 		},
 		doStageOne: function() {
-			_proposalStage(_DB, false);
+			_proposalStage(0);
 			console.log("stage one done");
 		},
 		testStageOne: function() {
 			_.forIn(_DB, (obj,person) => {
 					console.log(obj.name + "    =======>     " + _DB[obj.acceptedID].name)	
 			})
+		},
+		doStageTwo: function(){
+			_eliminateStage(_DB);
 		}
 	};
 
@@ -174,6 +205,7 @@ var StableMatching = (function (data) {
 let personPreferredLists = parseDb(dummyDb);
 StableMatching.init(personPreferredLists);
 StableMatching.doStageOne();
-StableMatching.testStageOne();
+// StableMatching.testStageOne();
+StableMatching.doStageTwo();
 
 
