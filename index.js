@@ -1,7 +1,8 @@
 "use strict";
 
 let _ = require('lodash');
-let dummyDb = require('./dummy_db')
+let dummyDb = require('./dummy_db');
+var fs = require("fs");
 
 function parseDb(db) {
 	let output = {};
@@ -50,131 +51,129 @@ function parseDb(db) {
 
 var StableMatching = (function (data) {
 	let _DB = data;
+	let _REMOVED = {};
 	
-	function _proposalStage(iteration){
+	function _proposalStage(start){
+		let i = typeof start !== 'undefined' ?  start : 1;
 		let allProposed = false;
 		let stable = false;
-		let i = 1;
 
-		while(!allProposed) {
+		while(i < Object.keys(_DB).length + 1) {
 			let sender = _DB[i];
 			
-			if(sender.hasAcceptedProposal) {
-				// already has an accepted proposal, no need to continue
-				i++;
-			} else {
+			if(!sender.hasAcceptedSentProposal) {
 				// need to go through proposal stages for this person and their preferences
 				// next offer is first choice in preference list that hasn't been proposed to yet
-				let nextOfferIndex = _.findIndex(sender.choices, p => { return !p['offerSent'+iteration]; });	
-				sender.choices[nextOfferIndex]['offerSent'+iteration] = true;
-				// send offer to that person, proposeOffer will accept or reject the offer
-				let accepted  = proposalProcess( sender, _DB[sender.choices[nextOfferIndex].id], sender.choices[nextOfferIndex].strength );
-				if (accepted) {
-					// move on to next person
-					i++;
-				} 
+				// send offer to that person, propose Offer will accept or reject the offer
+				proposalProcess( sender, _DB[sender.choices[0].id], sender.choices[0].strength );
 			}
 
-			// status check to see if everyone has an accepted proposal
-			let statusCheck = _.findKey(_DB, o => { return !o.hasAcceptedProposal; });
-			if(!statusCheck) {
-				allProposed = true;
-				stable = true;
-			} else {
-				if(i == Object.keys(_DB).length + 1) {
-					// refresh
-					allProposed = true;
-					stable = false;
-				}
-			}
+			i++;
+			
 		};
 
-		if(!stable) {
-			_proposalStage(iteration++);
-		}
 	}
 
 	function proposalProcess(sender, receiver, receiverRank) {
 		// we now need to check to see if the receiver has accepted proposals and 
 		// how the receiver ranks the sender of the proposal 
 		let indexOfsender = _.findIndex(receiver.choices, p => { return p.id == sender.id; });
-		if( indexOfsender == -1 ) {
-			// rejected because they are not in the list
-			return false;
-		} else {
-			// create shortcut to senders object in receiver's list
-			let senderRank = receiver.choices[indexOfsender].strength;
-			if(receiver.hasAcceptedProposal) {
-				// need to compare against accept proposal
-				if(receiver.acceptedRank > senderRank) {
-					// rejected because offer has already been accept by someone with higher preference
-					rejectOffer(sender, null);
-					return false;
-				} else {
-					// accepted because the sender outranks the previously accepted proposal
-					// the previous proposal now needs to be denied
-					let prevIndex = _.findIndex(receiver.choices, p => { return p.strength == receiver.acceptedRank; });
-					rejectOffer(_DB[receiver.acceptedID], receiver);
-					acceptOffer(sender, receiver, receiverRank, senderRank);
-					return true;
-				} 
+		// create shortcut to senders object in receiver's list
+		let senderRank = receiver.choices[indexOfsender].strength;
+		if(receiver.hasAcceptedReceivedProposal) {
+			// need to compare against accept proposal
+			if(receiver.acceptedReceivedRank > senderRank) {
+				// rejected because offer has already been accept by someone with higher preference
+				rejectOffer(sender, receiver);
 			} else {
-				// accepted because he does not have any accepted proposal
+				// accepted because the sender outranks the previously accepted proposal
+				// the previous proposal now needs to be denied
 				acceptOffer(sender, receiver, receiverRank, senderRank);
-				return true;
-			}
-		}	
-	}
-
-	function acceptOffer(sender,receiver, receiverRank, senderRank) {
-		sender.hasAcceptedProposal = true;
-		sender.acceptedRank = receiverRank;
-		sender.acceptedID = receiver.id;
-		receiver.hasAcceptedProposal = true;
-		receiver.acceptedRank = senderRank;
-		receiver.acceptedID = sender.id;
-	}
-
-	function rejectOffer(sender,receiver) {
-		sender.hasAcceptedProposal = false;
-		sender.acceptedRank = -1;
-		sender.acceptedID = -1;
-		if ( receiver != null ) {
-			receiver.hasAcceptedProposal = false;
-			receiver.acceptedRank = -1;
-			receiver.acceptedID = -1;
+				rejectOffer(_DB[receiver.acceptedReceivedID], receiver);
+			} 
+		} else {
+			// accepted because he does not have any accepted proposal
+			acceptOffer(sender, receiver, receiverRank, senderRank);
 		}
 	}
 
+	function acceptOffer(sender,receiver, receiverRank, senderRank) {
+		sender.hasAcceptedSentProposal = true;
+		sender.acceptedSentRank = receiverRank;
+		sender.acceptedSentID = receiver.id;
+		receiver.hasAcceptedReceivedProposal = true;
+		receiver.acceptedReceivedRank = senderRank;
+		receiver.acceptedReceivedID = sender.id;
+	}
+
+	function rejectOffer(sender,receiver) {
+		sender.hasAcceptedSentProposal = false;
+		sender.acceptedSentRank = -1;
+		sender.acceptedSentID = -1;
+		
+		eliminateChoices(receiver,sender);
+
+		_proposalStage(sender.id)
+	}
+	
+
 	function _eliminateStage() {
 		_.forIn(_DB, (person,id) => {
-			let keepLast = _.findIndex(person.choices, function(p) { return p.id == person.acceptedID; });
-			person.choices.length = (keepLast + 1);
+			let sentTo = _DB[person.acceptedSentID];
+		  let keepLast = _.findIndex(sentTo.choices, function(p) { return p.id == person.id; });
+			for(let i = keepLast + 1; i < sentTo.choices; i++) {
+				// each the rejected and rejecter can remove each other from choices list
+				eliminateChoices(sentTo, _DB[sentTo.choices[i].id]);
+			}
 		});
 	}
 
-	function cycleReduceStage() {
+	function eliminateChoices(rejecter, rejected) {
+		let remove1 =  _.findIndex(rejected.choices, function(p) { return p.id == rejecter.id; });
+		rejected.choices.splice(remove1, 1);
+		let remove2 =  _.findIndex(rejecter.choices, function(p) { return p.id == rejected.id; });
+		rejecter.choices.splice(remove2, 1);
+	}
+
+	function _cycleReduceStage() {
 		let stable = false;
-		let i = 1;
+		
 		// all or nothing phase 
 		while(!stable) {
-			let p = _DB[_DB[i].choices[1].id]; // second remaining preference of starting person i
-			let q = _DB[p.choices[p.choices.length -1 ].id]; // last remaining preference of p
+			let start = indexWithMultipleRemain();
+
+			let p = _DB[start].choices[1] != undefined ?_DB[_DB[start].choices[1].id] : _DB[_DB[start].choices[_DB[_DB[start].choices.length - 1 ].id]]; // second remaining preference of starting person i
+			let q = _DB[p.choices[p.choices.length - 1 ].id]; // last remaining preference of p
+			
 			let currentPair = [p,q];
 			let cyclePairs = [currentPair]; // first pair in cycle
 			// cyclic reduction
 			let cycle = false;
-			while(!cycle) {
-				p = _DB[q.choices[1].id]; 
-				q = _DB[p.choices[p.choices.length -1 ].id];
-				let newPair = [p,q];
-				cyclePairs.push(newPair);
+			let cycleCancled = false
+			while(!cycle && !cycleCancled) {
 
-				if(newPair == currentPair) {
-					cycle = true;
-					// TODO remove diagnals in cyclePairs
-					eliminateDiagnals(cyclePairs)
+				// make sure there is at least one element in the choices remaining
+				if(q.choices.length === 0) {
+					// this element needs to be removed and all preferences indicating it
+					eliminateFromPool(q.id);
+					cycleCancled = true;
+				} else {
+					p = q.choices[1] != undefined ? _DB[q.choices[1].id] : _DB[q.choices[q.choices.length - 1 ].id]; 
+					q = _DB[p.choices[p.choices.length - 1 ].id];
+
+					let newPair = [p,q];
+					cyclePairs.push(newPair);
+
+					if(newPair[0].id == currentPair[0].id) {
+						console.log("CYCLE OCCURED")
+						cycle = true;
+						// TODO remove diagnals in cyclePairs
+						eliminateDiagnals(cyclePairs)
+					} else {
+						console.log(cyclePairs.length)
+					}
 				}
+
 			}
 
 			// TODO if everyone has 1 remainging match then stable
@@ -184,20 +183,46 @@ var StableMatching = (function (data) {
 
 	}
 
+	function indexWithMultipleRemain() {
+		let start = false;
+		_.forIn(_DB, (person,key) => {
+			if( person.choices.length > 1 ) {
+				start =  key; 
+			}
+		});
+		console.log("START ===> " + start)
+		return start;
+	}
+
+	function eliminateFromPool(rid) {
+		_REMOVED[rid] = _.cloneDeep(_DB[rid]);
+		delete _DB[rid];
+		_.forIn(_DB, (person,i) => {
+			let remove = _.findIndex(person.choices, function(p) { return p.id == rid; });
+			person.choices = person.choices.splice(remove, 1);
+		})
+
+	}
+
 	function eliminateDiagnals(pairs) {
 		for(let i = 0; i<pairs.length; i++) {
 				// first index doesnt have a diagnal match
 				if(i != 0) {
-					let lastDex =  _.findIndex(_DB[pairs[i][0].id].choices, function(p) { return p.id == pairs[i][1].id; });
-					pairs[i][0].id].choices.length = lastDex + 1;
-					let lastPrevDex = _.findIndex(_DB[pairs[i][1].id].choices, function(p) { return p.id == pairs[i][0].id; });
-					pairs[i][1].id].choices.length = lastPrevDex + 1;
+					// the - 1 creates the diagnal effect
+					_DB[pairs[i][0].id].choices = _.remove(_DB[pairs[i][0].id].choices, c => {return c.id == pairs[i - 1][1].id;});
+					_DB[pairs[i - 1][1].id].choices = _.remove(_DB[pairs[i][0].id].choices, c => {return c.id == pairs[i][0].id;});
 				}
 		}
 	}
 
 	function stabilityCheck() {
-
+		let stable = true;
+		_.forIn(_DB, (person, key) => {
+			if(person.choices.length > 1) {
+				stable = false;
+			}
+		})
+		return stable;
 	}
 
 	
@@ -206,7 +231,7 @@ var StableMatching = (function (data) {
 			_DB = db;
 		},
 		doStageOne: function() {
-			_proposalStage(0);
+			_proposalStage(1);
 			console.log("stage one done");
 		},
 		testStageOne: function() {
@@ -215,7 +240,15 @@ var StableMatching = (function (data) {
 			})
 		},
 		doStageTwo: function(){
-			_eliminateStage(_DB);
+			_eliminateStage();
+			console.log("stage two done");
+		},
+		doStageThree: function() {
+			_cycleReduceStage();
+			console.log("stage three done");
+		},
+		getFinalMatches: function() {
+			return _DB;
 		}
 	};
 
@@ -226,5 +259,10 @@ StableMatching.init(personPreferredLists);
 StableMatching.doStageOne();
 // StableMatching.testStageOne();
 StableMatching.doStageTwo();
+// StableMatching.doStageThree();
+fs.appendFile('/Users/ramboramos/Documents/__RESULTS__.json', JSON.stringify(StableMatching.getFinalMatches()), (err) => {
+	if (err) throw err;
+});
+
 
 
