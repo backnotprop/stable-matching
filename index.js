@@ -38,9 +38,7 @@ function parseDb(db) {
 				});
 			}
 		};
-
-
-		output[db[i].id].choices = _.sortBy(output[db[i].id].choices, o => { return o.strength; });
+		output[db[i].id].choices = _.orderBy(output[db[i].id].choices,['strength'],['desc']);
 
 		i++;
 	};	
@@ -86,10 +84,14 @@ var StableMatching = (function (data) {
 				// rejected because offer has already been accept by someone with higher preference
 				rejectOffer(sender, receiver);
 			} else {
+
 				// accepted because the sender outranks the previously accepted proposal
 				// the previous proposal now needs to be denied
+				let rejected = _DB[receiver.acceptedReceivedID].id;
+
 				acceptOffer(sender, receiver, receiverRank, senderRank);
-				rejectOffer(_DB[receiver.acceptedReceivedID], receiver);
+				rejectOffer(_DB[rejected], receiver);
+		
 			} 
 		} else {
 			// accepted because he does not have any accepted proposal
@@ -119,11 +121,10 @@ var StableMatching = (function (data) {
 
 	function _eliminateStage() {
 		_.forIn(_DB, (person,id) => {
-			let sentTo = _DB[person.acceptedSentID];
-		  let keepLast = _.findIndex(sentTo.choices, function(p) { return p.id == person.id; });
-			for(let i = keepLast + 1; i < sentTo.choices; i++) {
+			let keepLast = _.findIndex(person.choices, function(p) { return p.id == person.acceptedReceivedID; });
+			for(let i = keepLast + 1; i < person.choices.length; i++) {
 				// each the rejected and rejecter can remove each other from choices list
-				eliminateChoices(sentTo, _DB[sentTo.choices[i].id]);
+				eliminateChoices(person, _DB[person.choices[i].id]);
 			}
 		});
 	}
@@ -137,47 +138,47 @@ var StableMatching = (function (data) {
 
 	function _cycleReduceStage() {
 		let stable = false;
-		
 		// all or nothing phase 
 		while(!stable) {
 			let start = indexWithMultipleRemain();
-
-			let p = _DB[start].choices[1] != undefined ? _DB[_DB[start].choices[1].id] : _DB[_DB[start].choices[_DB[_DB[start].choices.length - 1 ].id]]; // second remaining preference of starting person i
-			let q = _DB[p.choices[p.choices.length - 1 ].id]; // last remaining preference of p
+			
+			if(!start) {
+				_.forIn(_DB, (p,k) =>{
+					console.log("ID - "+ p.id);
+					console.log("_________")
+					_.each(p.choices, (c)=>{console.log(c.id)})
+					console.log();
+					console.log("==================")
+				})
+			}
+			let p = _DB[ _DB[start].id ]; // starting person
+			let q = _DB[ _DB[start].choices[1].id ]; // their second preference
 			
 			let currentPair = [p,q];
 			let cyclePairs = [currentPair]; // first pair in cycle
 			// cyclic reduction
 			let cycle = false;
-			let cycleCancled = false
-			while(!cycle && !cycleCancled) {
 
-				// make sure there is at least one element in the choices remaining
-				if(q.choices.length === 0) {
-					// this element needs to be removed and all preferences indicating it
-					deleteFromPool(q.id);
-					cycleCancled = true;
-				} else {
-					p = q.choices[1] != undefined ? _DB[q.choices[1].id] : _DB[q.choices[q.choices.length - 1 ].id]; 
-					q = _DB[p.choices[p.choices.length - 1 ].id];
+			while(!cycle) {
 
-					let newPair = [p,q];
-					
-					let spotCycle = _.findIndex(cyclePairs, function(p) { return p[0].id == p.id; });
-					if ( spotCycle == -1 ) {
-						cyclePairs.push(newPair);
-					} else {
-						cycle = true;
-						// cycle pairs should start where the cycle was found
-						cyclePairs.splice(0,spotCycle)
-						eliminateDiagnals(cyclePairs)
-					}
+				p = _DB[q.choices[q.choices.length - 1 ].id]; 
+				q = _DB[p.choices[1].id];
 
+				let newPair = [p,q];
+				let spotCycle = _.findIndex(cyclePairs, function(pair) { return pair[0].id == p.id; });
+				
+				cyclePairs.push(newPair);
+
+				if ( spotCycle != -1 ) {
+					cycle = true;
+					// cycle pairs should start where the cycle was found
+					cyclePairs.splice(0,spotCycle);
+					eliminateDiagnals(cyclePairs);
+					removeRejects();
 				}
 
-			}
-
-			// TODO if everyone has 1 remainging match then stable
+			};			
+			
 			stable = stabilityCheck();
 			
 		};
@@ -188,19 +189,28 @@ var StableMatching = (function (data) {
 		let start = false;
 		_.forIn(_DB, (person,key) => {
 			if( person.choices.length > 1 ) {
-				start = key; 
+				start = (start != false) ? start : key;
 			}
 		});
 		return start;
 	}
 
+	function removeRejects() {
+		_.forIn(_DB, (person, key) => {
+			if(person.choices.length < 1) {
+				deleteFromPool(person.id)
+			}
+		});
+	}
+
 	function deleteFromPool(rid) {
 		_REMOVED[rid] = _.cloneDeep(_DB[rid]);
 		delete _DB[rid];
-		_.forIn(_DB, (person,i) => {
+		_.forIn(_DB, (person,key) => {
 			let remove = _.findIndex(person.choices, function(p) { return p.id == rid; });
 			person.choices.splice(remove, 1);
 		});
+		removeRejects();
 	}
 
 	function eliminateDiagnals(pairs) {
@@ -211,14 +221,13 @@ var StableMatching = (function (data) {
 		}
 	}
 
-	function stabilityCheck() {
+	function stabilityCheck() {	
 		let stable = true;
 		_.forIn(_DB, (person, key) => {
 			if(person.choices.length > 1) {
-				stable = false;
+				return false;
 			}
 		});
-		return stable;
 	}
 
 	
@@ -250,15 +259,30 @@ var StableMatching = (function (data) {
 
 })();
 
-let personPreferredLists = parseDb(dummyDb);
+let staticDB = {
+	1:{id:1,choices:[{id:3, strength: 10},{id:4,strength: 8},{id:2, strength: 6},{id:6, strength: 4},{id:5, strength: 2}]},
+	2:{id:2,choices:[{id:6, strength: 10},{id:5,strength: 8},{id:4, strength: 6},{id:1, strength: 4},{id:3, strength: 2}]},
+	3:{id:3,choices:[{id:2, strength: 10},{id:4,strength: 8},{id:5, strength: 6},{id:1, strength: 4},{id:6, strength: 2}]},
+	4:{id:4,choices:[{id:5, strength: 10},{id:2,strength: 8},{id:3, strength: 6},{id:6, strength: 4},{id:1, strength: 2}]},
+	5:{id:5,choices:[{id:3, strength: 10},{id:1,strength: 8},{id:2, strength: 6},{id:4, strength: 4},{id:6, strength: 2}]},
+	6:{id:6,choices:[{id:5, strength: 10},{id:1,strength: 8},{id:3, strength: 6},{id:4, strength: 4},{id:2, strength: 2}]},
+}
+
+let personPreferredLists = staticDB;// parseDb(dummyDb);
+
 StableMatching.init(personPreferredLists);
 StableMatching.doStageOne();
 // StableMatching.testStageOne();
 StableMatching.doStageTwo();
 StableMatching.doStageThree();
-fs.appendFile('/Users/ramboramos/Documents/__RESULTS__.json', JSON.stringify(StableMatching.getFinalMatches()), (err) => {
-	if (err) throw err;
-});
+let final = StableMatching.getFinalMatches();
+_.forIn(final, (p,k) =>{
+	console.log("ID - "+ p.id);
+	console.log("_________")
+	_.each(p.choices, (c)=>{console.log(c.id)})
+	console.log();
+	console.log("==================")
+})
 
 
 
