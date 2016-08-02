@@ -142,47 +142,39 @@ var StableMatching = (function (data) {
 		while(!stable) {
 			let start = indexWithMultipleRemain();
 			
-			if(!start) {
-				_.forIn(_DB, (p,k) =>{
-					console.log("ID - "+ p.id);
-					console.log("_________")
-					_.each(p.choices, (c)=>{console.log(c.id)})
-					console.log();
-					console.log("==================")
-				})
-			}
-			let p = _DB[ _DB[start].id ]; // starting person
-			let q = _DB[ _DB[start].choices[1].id ]; // their second preference
-			
-			let currentPair = [p,q];
-			let cyclePairs = [currentPair]; // first pair in cycle
-			// cyclic reduction
-			let cycle = false;
-
-			while(!cycle) {
-
-				p = _DB[q.choices[q.choices.length - 1 ].id]; 
-				q = _DB[p.choices[1].id];
-
-				let newPair = [p,q];
-				let spotCycle = _.findIndex(cyclePairs, function(pair) { return pair[0].id == p.id; });
+			if(start) {
+				let p = _DB[ _DB[start].id ]; // starting person
+				let q = _DB[ _DB[start].choices[1].id ]; // their second preference
 				
-				cyclePairs.push(newPair);
+				let currentPair = [p,q];
+				let cyclePairs = [currentPair]; // first pair in cycle
+				// cyclic reduction
+				let cycle = false;
 
-				if ( spotCycle != -1 ) {
-					cycle = true;
-					// cycle pairs should start where the cycle was found
-					cyclePairs.splice(0,spotCycle);
-					eliminateDiagnals(cyclePairs);
-					removeRejects();
-				}
+				while(!cycle) {
 
-			};			
-			
-			stable = stabilityCheck();
-			
+					p = _DB[q.choices[q.choices.length - 1 ].id];
+					q = _DB[p.choices[1]] ? _DB[p.choices[1].id]  : _DB[p.choices[p.choices.length - 1 ].id] ;
+
+					let newPair = [p,q];
+					let spotCycle = _.findIndex(cyclePairs, function(pair) { return pair[0].id == p.id; });
+					
+					cyclePairs.push(newPair);
+
+					if ( spotCycle != -1 ) {
+						cycle = true;
+						// cycle pairs should start where the cycle was found
+						cyclePairs.splice(0,spotCycle);
+						eliminateDiagnals(cyclePairs);
+					}
+
+				};	
+			}	else {
+				stable = true;
+			}	
+
 		};
-
+		
 	}
 
 	function indexWithMultipleRemain() {
@@ -198,6 +190,7 @@ var StableMatching = (function (data) {
 	function removeRejects() {
 		_.forIn(_DB, (person, key) => {
 			if(person.choices.length < 1) {
+				console.log("HEY ==> " + person.id)
 				deleteFromPool(person.id)
 			}
 		});
@@ -210,7 +203,7 @@ var StableMatching = (function (data) {
 			let remove = _.findIndex(person.choices, function(p) { return p.id == rid; });
 			person.choices.splice(remove, 1);
 		});
-		removeRejects();
+		//removeRejects();
 	}
 
 	function eliminateDiagnals(pairs) {
@@ -219,15 +212,6 @@ var StableMatching = (function (data) {
 			// the [i - 1][1] creates the diagnal effect
 			eliminateChoices(_DB[pairs[i][0].id],_DB[pairs[i - 1][1].id]);
 		}
-	}
-
-	function stabilityCheck() {	
-		let stable = true;
-		_.forIn(_DB, (person, key) => {
-			if(person.choices.length > 1) {
-				return false;
-			}
-		});
 	}
 
 	
@@ -259,16 +243,16 @@ var StableMatching = (function (data) {
 
 })();
 
-let staticDB = {
-	1:{id:1,choices:[{id:3, strength: 10},{id:4,strength: 8},{id:2, strength: 6},{id:6, strength: 4},{id:5, strength: 2}]},
-	2:{id:2,choices:[{id:6, strength: 10},{id:5,strength: 8},{id:4, strength: 6},{id:1, strength: 4},{id:3, strength: 2}]},
-	3:{id:3,choices:[{id:2, strength: 10},{id:4,strength: 8},{id:5, strength: 6},{id:1, strength: 4},{id:6, strength: 2}]},
-	4:{id:4,choices:[{id:5, strength: 10},{id:2,strength: 8},{id:3, strength: 6},{id:6, strength: 4},{id:1, strength: 2}]},
-	5:{id:5,choices:[{id:3, strength: 10},{id:1,strength: 8},{id:2, strength: 6},{id:4, strength: 4},{id:6, strength: 2}]},
-	6:{id:6,choices:[{id:5, strength: 10},{id:1,strength: 8},{id:3, strength: 6},{id:4, strength: 4},{id:2, strength: 2}]},
-}
+// let staticDB = {
+// 	1:{id:1,choices:[{id:3, strength: 10},{id:4,strength: 8},{id:2, strength: 6},{id:6, strength: 4},{id:5, strength: 2}]},
+// 	2:{id:2,choices:[{id:6, strength: 10},{id:5,strength: 8},{id:4, strength: 6},{id:1, strength: 4},{id:3, strength: 2}]},
+// 	3:{id:3,choices:[{id:2, strength: 10},{id:4,strength: 8},{id:5, strength: 6},{id:1, strength: 4},{id:6, strength: 2}]},
+// 	4:{id:4,choices:[{id:5, strength: 10},{id:2,strength: 8},{id:3, strength: 6},{id:6, strength: 4},{id:1, strength: 2}]},
+// 	5:{id:5,choices:[{id:3, strength: 10},{id:1,strength: 8},{id:2, strength: 6},{id:4, strength: 4},{id:6, strength: 2}]},
+// 	6:{id:6,choices:[{id:5, strength: 10},{id:1,strength: 8},{id:3, strength: 6},{id:4, strength: 4},{id:2, strength: 2}]},
+// }
 
-let personPreferredLists = staticDB;// parseDb(dummyDb);
+let personPreferredLists = parseDb(dummyDb);
 
 StableMatching.init(personPreferredLists);
 StableMatching.doStageOne();
@@ -276,13 +260,20 @@ StableMatching.doStageOne();
 StableMatching.doStageTwo();
 StableMatching.doStageThree();
 let final = StableMatching.getFinalMatches();
+let matches = 0;
+let rejects = 0;
 _.forIn(final, (p,k) =>{
-	console.log("ID - "+ p.id);
-	console.log("_________")
-	_.each(p.choices, (c)=>{console.log(c.id)})
-	console.log();
-	console.log("==================")
+	if(p.choices.length == 1) {
+		matches ++;
+	} else if(p.choices.length == 0) {
+		rejects ++;
+	} else {
+		console.log("ERROR: THIS SHOULDNT CALL ----");
+	}
 })
+
+console.log( "MATCHES: " + matches );
+	console.log( "REJECTS: " + rejects)
 
 
 
