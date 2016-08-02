@@ -88,51 +88,51 @@ var StableMatching = (function (data) {
 
 		// iterates over the process of sending, accepting, and rejecting proposals
 		function proposalProcess(sender, receiver, receiverRank) {
-		// we now need to check to see if the receiver has accepted proposals and 
-		// how the receiver ranks the sender of the proposal 
-		let indexOfsender = _.findIndex(receiver.choices, p => { return p.id == sender.id; });
-		// create shortcut to senders object in receiver's list
-		let senderRank = receiver.choices[indexOfsender].strength;
-		if(receiver.hasAcceptedReceivedProposal) {
-			// need to compare against accept proposal
-			if(receiver.acceptedReceivedRank > senderRank) {
-				// rejected because offer has already been accept by someone with higher preference
-				rejectOffer(sender, receiver);
+			// we now need to check to see if the receiver has accepted proposals and 
+			// how the receiver ranks the sender of the proposal 
+			let indexOfsender = _.findIndex(receiver.choices, p => { return p.id == sender.id; });
+			// create shortcut to senders object in receiver's list
+			let senderRank = receiver.choices[indexOfsender].strength;
+			if(receiver.hasAcceptedReceivedProposal) {
+				// need to compare against accept proposal
+				if(receiver.acceptedReceivedRank > senderRank) {
+					// rejected because offer has already been accept by someone with higher preference
+					rejectOffer(sender, receiver);
+				} else {
+
+					// accepted because the sender outranks the previously accepted proposal
+					// the previous proposal now needs to be denied
+					let rejected = _DB[receiver.acceptedReceivedID].id;
+
+					acceptOffer(sender, receiver, receiverRank, senderRank);
+					rejectOffer(_DB[rejected], receiver);
+			
+				} 
 			} else {
-
-				// accepted because the sender outranks the previously accepted proposal
-				// the previous proposal now needs to be denied
-				let rejected = _DB[receiver.acceptedReceivedID].id;
-
+				// accepted because he does not have any accepted proposal
 				acceptOffer(sender, receiver, receiverRank, senderRank);
-				rejectOffer(_DB[rejected], receiver);
-		
-			} 
-		} else {
-			// accepted because he does not have any accepted proposal
-			acceptOffer(sender, receiver, receiverRank, senderRank);
+			}
 		}
-	}
 
-	// sender has accepted sent, receiver has accepted received
-	function acceptOffer(sender,receiver, receiverRank, senderRank) {
-		sender.hasAcceptedSentProposal = true;
-		sender.acceptedSentRank = receiverRank;
-		sender.acceptedSentID = receiver.id;
-		receiver.hasAcceptedReceivedProposal = true;
-		receiver.acceptedReceivedRank = senderRank;
-		receiver.acceptedReceivedID = sender.id;
-	}
+		// sender has accepted sent, receiver has accepted received
+		function acceptOffer(sender,receiver, receiverRank, senderRank) {
+			sender.hasAcceptedSentProposal = true;
+			sender.acceptedSentRank = receiverRank;
+			sender.acceptedSentID = receiver.id;
+			receiver.hasAcceptedReceivedProposal = true;
+			receiver.acceptedReceivedRank = senderRank;
+			receiver.acceptedReceivedID = sender.id;
+		}
 
-	// sender is denied proposal
-	function rejectOffer(sender,receiver) {
-		sender.hasAcceptedSentProposal = false;
-		sender.acceptedSentRank = -1;
-		sender.acceptedSentID = -1;
-		eliminateChoices(receiver,sender);
-		// the function now reruns until sender can send a successful proposal
-		_proposalStage(sender.id)
-	}
+		// sender is denied proposal
+		function rejectOffer(sender,receiver) {
+			sender.hasAcceptedSentProposal = false;
+			sender.acceptedSentRank = -1;
+			sender.acceptedSentID = -1;
+			eliminateChoices(receiver,sender);
+			// the function now reruns until sender can send a successful proposal
+			_proposalStage(sender.id)
+		}
 
 	}
 
