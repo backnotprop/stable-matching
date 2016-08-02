@@ -8,7 +8,7 @@ let dummyDb = require('./dummy_db');
 
 /**
  * - Parse Db
- * - NOT part of main algorithim
+ * - NOT part of main algorithm
  * - takes a collection of people and randomly generates preferences for them
  * - used for testing
  */
