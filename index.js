@@ -58,8 +58,9 @@ function parseDb(db) {
  * 
  * - Irvings Algorithim for Stable Roomate Problem 
  */
-let StableMatching = (function (data) {
-  let _DB = data;
+let StableMatching = (function () {
+  let _DB;
+  let _ORIGINAL;
 
 // let _REMOVED = {}; // solution to make everyone matched
 
@@ -74,11 +75,13 @@ let StableMatching = (function (data) {
   	// functional loop
     while(i < Object.keys(_DB).length + 1) {
       let sender = _DB[i];
-      if(!sender.hasAcceptedSentProposal) {
-				// need to go through proposal stages for this person and their preferences
-				// next offer is first choice in preference list that hasn't been proposed to yet
-				// send offer to that person, propose Offer will accept or reject the offer
-        proposalProcess( sender, _DB[sender.choices[0].id], sender.choices[0].strength );
+      if(sender) {
+        if(!sender.hasAcceptedSentProposal) {
+          // need to go through proposal stages for this person and their preferences
+          // next offer is first choice in preference list that hasn't been proposed to yet
+          // send offer to that person, propose Offer will accept or reject the offer
+          proposalProcess( sender, _DB[sender.choices[0].id], sender.choices[0].strength );
+        }
       }
       i++;
     };
@@ -126,7 +129,7 @@ let StableMatching = (function (data) {
       sender.acceptedSentID = -1;
       eliminateChoices(receiver,sender);
 			// the function now reruns until sender can send a successful proposal
-      _proposalStage(sender.id);
+      	_proposalStage(sender.id);
     }
 
   }
@@ -250,6 +253,7 @@ let StableMatching = (function (data) {
   return {	
     init: function(db) {
       _DB = db;
+      _ORIGINAL = _.cloneDeep(db);
     },
     doStageOne: function() {
       _proposalStage(1);
@@ -296,20 +300,53 @@ let StableMatching = (function (data) {
       let final = StableMatching.getFinalMatches();
       let matches = 0;
       let rejects = 0;
+      let rejectsList = [];
       _.forIn(final, (p,k) =>{
         if(p.choices.length == 1) {
           matches ++;
         } else if(p.choices.length == 0) {
+          rejectsList.push(''+p.id);
           rejects ++;
         } else {
           console.log("ERROR: THIS SHOULDNT CALL ----");
         }
       });
-      console.log( "MATCHES: " + matches );
-      console.log( "REJECTS: " + rejects);
+
+      
+      let org = StableMatching.getOriginal();
+
+      console.log("START")
+      console.log(Object.keys(org).length);  
+
+      _.forIn(org, (values,key) => {
+        if(rejectsList.indexOf(key) == -1) {
+          delete org[key];
+          _.forIn(org, (person,k) => {
+            let remove = _.findIndex(person.choices, function(p) { return p.id == parseInt(key,10); });
+            if(remove != -1) {
+              console.log("YABAB")
+            }
+            person.choices.splice(remove, 1);
+          });
+        }
+      });
+
+      console.log("FINSISH")
+      console.log(Object.keys(org).length);  
+
+      let recurse = _.cloneDeep(StableMatching);
+      recurse.init(org);
+
+      recurse.doStageOne();
+      recurse.doStageTwo();
+      recurse.doStageThree();
+      recurse.generateReport();  
     },
     getFinalMatches: function() {
       return _DB;
+    },
+    getOriginal: function() {
+      return _ORIGINAL;
     }
   };
 
