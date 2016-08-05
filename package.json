@@ -6,17 +6,16 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/mdramos/stable-matching.git"
-  },
   "author": "Michael Ramos",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/mdramos/stable-matching/issues"
   },
-  "homepage": "https://github.com/mdramos/stable-matching#readme",
+  "dependencies": {
+    "lodash": "^4.14.1"
+  },
   "devDependencies": {
-    "eslint": "^3.2.2"
+    "eslint": "^2.11.1"
   }
+  
 }
