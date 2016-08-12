@@ -126,7 +126,11 @@ let StableMatching = (function () {
 
 	        // redefine p and q during the iterative process
           p = _DB[q.choices[q.choices.length - 1 ].id];
-          q = _DB[p.choices[1].id]
+          if(_.isUndefined(p.choices[1]) || p.choices.length == 0){
+            q = _DB[ p.choices[0].id ]
+          } else {
+            q = _DB[ p.choices[1].id ]; 
+          } 
 
           let newPair = [p,q];
 
@@ -183,20 +187,25 @@ let StableMatching = (function () {
 
   // checks the data state for anyone with no choices remaining
   function stablilityCheck() {
-    let stable = true;
+    let rejected = false;
+
 		_.forIn(_DB, (person, key) => {
-			if(person.choices.length === 0) {
-				return {
-          stable: false,
-          rejected: person,
-          message: "There is an entity which has been rejected by all"
-        };
+			if(person.choices.length == 0) {
+        rejected = (rejected != false) ? rejected : person.id;
 			}
 		});
 
-    return {
-      stable: true
-    };
+    if(!rejected) {
+      return {
+        stable: true
+      };
+    } else {
+      return {
+        stable: false,
+        rejected: rejected,
+        message: "There is an entity which has been rejected by all"
+      };
+    }
   }
 
   // generates an exception for unstable matching
@@ -264,15 +273,20 @@ let StableMatching = (function () {
     },
     initAndRun: function(db) {
       let testDB = StableMatching.getTestSet();
-      StableMatching.init(testDB);
+      StableMatching.init(db);
       try {
         StableMatching.doStageOne();
         StableMatching.doStageTwo();
         StableMatching.doStageThree();
       } catch(errorResults) {
         // return the failed
+        console.log(errorResults)
+        if(!errorResults.rejected){
+          throw errorResults;
+        }
         return {
           failed: true,
+          error: errorResults,
           reject: errorResults.rejected
         };
       }
@@ -333,10 +347,9 @@ let StableDriver = (function (StableMatching) {
       if (iteration.failed) {
         // unstable
         // keep track of rejections
-        
         iterationState.rejects.push(iteration.rejects)
         // construct a new state without rejects
-        iterationState.currentState = _reduceState(initialState.currentState, iteration.reject.id);
+        iterationState.currentState = _reduceState(iterationState.currentState, iteration.reject);
         iterationState.iterationCount++;
       } else {
         // stable (everyone matched)
@@ -357,11 +370,21 @@ let StableDriver = (function (StableMatching) {
 
 
   function _reduceState(state, rid) {
+    // delete user from new state
 		delete state[rid];
 		_.forIn(state, (person,key) => {
+      // reset person keys
+      person.hasAcceptedReceivedProposal = false; 
+      person.hasAcceptedSentProposal = false;                                                                                           
+      delete person.acceptedReceivedRank;                                                                                                    
+      delete person.acceptedReceivedID;                                                                                                                                                                                                 
+      delete person.acceptedSentRank;                                                                                                         
+      delete person.acceptedSentID;
+      // deleted reject from this list
 			let removeIndex = _.findIndex(person.choices, function(p) { return p.id == rid; });
 			person.choices.splice(removeIndex, 1);
 		});
+
     return state;
   }
 
@@ -381,7 +404,8 @@ let StableDriver = (function (StableMatching) {
     if(iteration.failed) {
       return {
         failed: true,
-        rejects: iteration.rejects
+        reject: iteration.reject,
+        error: iteration.error
       }
     } else {
       return {
