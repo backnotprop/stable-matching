@@ -1,4 +1,7 @@
-module.exports = [{"id":1,"first_name":"Thomas","last_name":"Stanley","email":"tstanley0@g.co"},
+"use strict";
+let _ = require('lodash');
+
+var dummyData = [{"id":1,"first_name":"Thomas","last_name":"Stanley","email":"tstanley0@g.co"},
 {"id":2,"first_name":"Keith","last_name":"Kim","email":"kkim1@usgs.gov"},
 {"id":3,"first_name":"Donald","last_name":"Johnston","email":"djohnston2@globo.com"},
 {"id":4,"first_name":"Jennifer","last_name":"Thomas","email":"jthomas3@sphinn.com"},
@@ -97,4 +100,56 @@ module.exports = [{"id":1,"first_name":"Thomas","last_name":"Stanley","email":"t
 {"id":97,"first_name":"Ralph","last_name":"Coleman","email":"rcoleman2o@google.com.hk"},
 {"id":98,"first_name":"Helen","last_name":"Montgomery","email":"hmontgomery2p@statcounter.com"},
 {"id":99,"first_name":"George","last_name":"Thompson","email":"gthompson2q@marketwatch.com"},
-{"id":100,"first_name":"Benjamin","last_name":"Henry","email":"bhenry2r@baidu.com"}]
+{"id":100,"first_name":"Benjamin","last_name":"Henry","email":"bhenry2r@baidu.com"}
+
+];
+
+
+/**
+ * - Parse Db
+ * - NOT part of main algorithm
+ * - takes a collection of people and randomly generates preferences for them
+ * - used for testing
+ */
+function parseDb(db) {
+  let output = {};
+  let i = 0;
+  // until everyone has generated preferences
+  while(i < db.length) {
+    // init person preference object
+    output[db[i].id] = {
+      name: db[i].first_name + " " +  db[i].last_name,
+      id: db[i].id,
+      choices: []
+    };	
+    // generate a rank for every other person (j reps ids, so start at 1)
+    // keep track of unique/used weights
+    let usedPrefs = [];
+    for (let j = 1; j < db.length + 1; j++) {
+      if(j != db[i].id) {
+        let randomPref;
+        // used to keep track of unique preferences (nodups)
+        let newPref = false;
+        while(!newPref) {
+          randomPref = Math.floor(Math.random()* db.length);
+          if(usedPrefs.indexOf(randomPref) == -1) {
+            usedPrefs.push(randomPref);
+            newPref = true;
+          } 
+        }
+        // create new match and preference weight
+        output[db[i].id].choices.push({
+          id: j,
+          strength: randomPref
+        });
+      }
+    };
+    output[db[i].id].choices = _.orderBy(output[db[i].id].choices,['strength'],['desc']);
+
+    i++;
+  };	
+  return output; 
+}
+
+
+module.exports = parseDb(dummyData);

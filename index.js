@@ -7,62 +7,12 @@ let dummyDb = require('./dummy_db');
 
 
 /**
- * - Parse Db
- * - NOT part of main algorithm
- * - takes a collection of people and randomly generates preferences for them
- * - used for testing
- */
-function parseDb(db) {
-  let output = {};
-  let i = 0;
-  // until everyone has generated preferences
-  while(i < db.length) {
-    // init person preference object
-    output[db[i].id] = {
-      name: db[i].first_name + " " +  db[i].last_name,
-      id: db[i].id,
-      choices: []
-    };	
-    // generate a rank for every other person (j reps ids, so start at 1)
-    // keep track of unique/used weights
-    let usedPrefs = [];
-    for (let j = 1; j < db.length + 1; j++) {
-      if(j != db[i].id) {
-        let randomPref;
-        // used to keep track of unique preferences (nodups)
-        let newPref = false;
-        while(!newPref) {
-          randomPref = Math.floor(Math.random()* db.length);
-          if(usedPrefs.indexOf(randomPref) == -1) {
-            usedPrefs.push(randomPref);
-            newPref = true;
-          } 
-        }
-        // create new match and preference weight
-        output[db[i].id].choices.push({
-          id: j,
-          strength: randomPref
-        });
-      }
-    };
-    output[db[i].id].choices = _.orderBy(output[db[i].id].choices,['strength'],['desc']);
-
-    i++;
-  };	
-  return output; 
-}
-
-
-/**
  * StableMatching
  * 
  * - Irvings Algorithim for Stable Roomate Problem 
  */
 let StableMatching = (function () {
   let _DB;
-  let _ORIGINAL;
-
-  // let _REMOVED = {}; // solution to make everyone matched
 
   /**
    * Proposal Stage 1
@@ -94,20 +44,20 @@ let StableMatching = (function () {
       // create shortcut to senders object in receiver's list
       let senderRank = receiver.choices[indexOfsender].strength;
       if(receiver.hasAcceptedReceivedProposal) {
-	// need to compare against accept proposal
+	      // need to compare against accept proposal
         if(receiver.acceptedReceivedRank > senderRank) {
-	  // rejected because offer has already been accept by someone with higher preference
+	        // rejected because offer has already been accept by someone with higher preference
           rejectOffer(sender, receiver);
         } else {
-	  // define rejected before received accepts a new offer
+	        // define rejected before received accepts a new offer
           let rejected = _DB[receiver.acceptedReceivedID].id;
           acceptOffer(sender, receiver, receiverRank, senderRank);
-	  // accepted because the sender outranks the previously accepted proposal
-	  // the previous proposal now needs to be denied
+          // accepted because the sender outranks the previously accepted proposal
+          // the previous proposal now needs to be denied
           rejectOffer(_DB[rejected], receiver);
         } 
       } else {
-	// accepted because he does not have any accepted proposal
+	      // accepted because he does not have any accepted proposal
         acceptOffer(sender, receiver, receiverRank, senderRank);
       }
     }
@@ -142,7 +92,7 @@ let StableMatching = (function () {
     _.forIn(_DB, (person,id) => {
       let keepLast = _.findIndex(person.choices, function(p) { return p.id == person.acceptedReceivedID; });
       for(let i = keepLast + 1; i < person.choices.length; i++) {
-	// each the rejected and rejecter can remove each other from choices list
+	      // each the rejected and rejecter can remove each other from choices list
         eliminateChoices(person, _DB[person.choices[i].id]);
       }
     });
@@ -153,43 +103,48 @@ let StableMatching = (function () {
    * - description needed
    */
   function _cycleReduceStage() {
-    let stable = false;
+    let allMatched = false;
     // all or nothing phase 
-    while(!stable) {
+    while(!allMatched) {
       // there is a start if any one person has more than 1 preference remaining
       let start = indexWithMultipleRemain();
 
       if(start) {
-        let p = _DB[ _DB[start].id ]; // starting person
-        let q = _DB[ _DB[start].choices[1].id ]; // their second preference
-
+        let p = _DB[start] // starting person
+        let q = _DB[ p.choices[1].id ]; // their second preference
+       
         let currentPair = [p,q];
         let cyclePairs = [currentPair]; // first pair in cycle
-  	// cyclic reduction
+  	    // cyclic reduction
         let cycle = false;
-
         while(!cycle) {
-	  // redefine p and q during the iterative process
+          // need to check stability at this point
+          let stability = stablilityCheck();
+          if(!stability.stable) {
+            throw new StabilityException(stability);
+          }
+
+	        // redefine p and q during the iterative process
           p = _DB[q.choices[q.choices.length - 1 ].id];
-          q = _DB[p.choices[1]] ? _DB[p.choices[1].id]  : _DB[p.choices[p.choices.length - 1 ].id] ;
+          q = _DB[p.choices[1].id]
+
           let newPair = [p,q];
 
-	  // look for a cycle in cyclePairs before pushing into it, check the new p to see if its reoccured
+	        // look for a cycle in cyclePairs before pushing into it, check the new p to see if its reoccured
           let spotCycle = _.findIndex(cyclePairs, (pair) => { return pair[0].id == p.id; });
           cyclePairs.push(newPair);
 
-	  // there was a cycle found, go through with the diagnal elimination phase
+	        // there was a cycle found, go through with the diagnal elimination phase
           if ( spotCycle != -1 ) {
             cycle = true;
-  	    // cycle pairs should start where the cycle was found
+  	        // cycle pairs should start where the cycle was found
             cyclePairs.splice(0,spotCycle);
             eliminateDiagnals(cyclePairs);
           }
         };	
       }	else {
-        stable = true;
+        allMatched = true;
       }	
-
     };
 
     // loop condition looking for persons who have multiple remaining preferences
@@ -207,10 +162,241 @@ let StableMatching = (function () {
     function eliminateDiagnals(pairs) {
       // start at second element for diagnal rejection
       for(let i = 1; i < pairs.length; i++) {
-	// the [i - 1][1] creates the diagnal effect
+	      // the [i - 1][1] creates the diagnal effect
         eliminateChoices(_DB[pairs[i][0].id],_DB[pairs[i - 1][1].id]);
       }
     }
+
+  }
+
+  /**
+   * shared  methods
+   */
+
+  // eliminates two people from each others preference list
+  function eliminateChoices(rejecter, rejected) {
+    let remove1 =  _.findIndex(rejected.choices, function(p) { return p.id == rejecter.id; });
+    rejected.choices.splice(remove1, 1);
+    let remove2 =  _.findIndex(rejecter.choices, function(p) { return p.id == rejected.id; });
+    rejecter.choices.splice(remove2, 1);
+  }
+
+  // checks the data state for anyone with no choices remaining
+  function stablilityCheck() {
+    let stable = true;
+		_.forIn(_DB, (person, key) => {
+			if(person.choices.length === 0) {
+				return {
+          stable: false,
+          rejected: person.id,
+          message: "There is an entity which has been rejected by all"
+        };
+			}
+		});
+
+    return {
+      stable: true
+    };
+  }
+
+  // generates an exception for unstable matching
+  function StabilityException(result) {
+   this.message = result.message;
+   this.name = "StabilityException";
+   this.rejected = result.rejected;
+  }
+
+
+  return {	
+    init: function(db) {
+      _DB = db;
+    },
+    doStageOne: function() {
+      return _proposalStage(1);
+    },
+    doStageTwo: function(){
+      return _eliminateStage();
+    },
+    doStageThree: function() {
+      return _cycleReduceStage();
+    },
+    getTestSet: function() {
+      return {
+        1:{id:1,choices:[{id:3, strength: 10},{id:4,strength: 8},{id:2, strength: 6},{id:6, strength: 4},{id:5, strength: 2}]},
+        2:{id:2,choices:[{id:6, strength: 10},{id:5,strength: 8},{id:4, strength: 6},{id:1, strength: 4},{id:3, strength: 2}]},
+        3:{id:3,choices:[{id:2, strength: 10},{id:4,strength: 8},{id:5, strength: 6},{id:1, strength: 4},{id:6, strength: 2}]},
+        4:{id:4,choices:[{id:5, strength: 10},{id:2,strength: 8},{id:3, strength: 6},{id:6, strength: 4},{id:1, strength: 2}]},
+        5:{id:5,choices:[{id:3, strength: 10},{id:1,strength: 8},{id:2, strength: 6},{id:4, strength: 4},{id:6, strength: 2}]},
+        6:{id:6,choices:[{id:5, strength: 10},{id:1,strength: 8},{id:3, strength: 6},{id:4, strength: 4},{id:2, strength: 2}]},
+      };
+    },
+    testStageOne: function() {
+      // TODO assert for each person that accepted received == that senders accepted sent
+    },
+    testStageTwo: function() {
+      let db = StableMatching.getFinalMatches();
+      let check = true;
+      _.forIn(db, (person,key) => {
+        _.each(person.match, match => {
+          if(db[match.id].matches.indexOf(person.id) == -1) {
+            check = false;
+          }
+        });
+      });
+      if(!check) {
+        console.log("ERROR - THERE IS A MATCH MISSMATCH");
+      } else {
+        console.log("STAGE 2 TEST SUCCESS");
+      }
+    },
+    testStageThree: function() {
+      // TODO assert cycle reduction is working
+    },
+    runAllTests: function() {
+      // let testDB = StableMatching.getTestSet();
+      // StableMatching.init(testDB);
+      // StableMatching.doStageOne();
+      // StableMatching.testStageOne();
+      // StableMatching.doStageTwo();
+      // StableMatching.testStageTwo();
+      // StableMatching.doStageThree();
+      // StableMatching.testStageThree();
+    },
+    initAndRun: function(db) {
+      let testDB = StableMatching.getTestSet();
+      StableMatching.init(testDB);
+      try {
+        StableMatching.doStageOne();
+        StableMatching.doStageTwo();
+        StableMatching.doStageThree();
+      } catch(errorResults) {
+        // return the failed
+        return {
+          failed: true,
+          reject: errorResults.rejected
+        };
+      }
+      // success
+      return {
+        failed: false,
+        matches: StableMatching.getFinalMatches(),
+      };
+    },
+    getFinalMatches: function() {
+      return _DB;
+    }
+  };
+
+})();
+
+
+
+
+/**
+ * 
+ * 
+ * 
+ */
+let StableDriver = (function (StableMatching) {
+  
+  /**
+   * 
+   **/
+  let _DATASTORE = {
+    initialState: {},
+    finalMatches: []
+  };
+
+  function _drive() {
+    let results = _iterationLoop(_DATASTORE.initialState);
+    // TODO console.log result stats
+    _generateReport(results.matches)
+    _DATASTORE.finalMatches = results.matches;
+  }
+
+  function _iterationLoop(initialState) {
+    
+    let iterationState = {
+      initialState: initialState,
+      currentState: initialState,
+      iterationCount: 0, 
+      matches: [],
+      rejects: []
+    };
+   
+    let stableMatching = false;
+    
+    while(!stableMatching) {
+      
+      let iteration = _runIteration(iterationState.currentState);
+
+      if (iteration.failed) {
+        // unstable
+        // keep track of rejections
+        
+        iterationState.rejects.push(iteration.rejects)
+        // construct a new state without rejects
+        iterationState.currentState = _constructNewState(iterations.reject, 'reduce');
+        iterationState.iterationCount++;
+      } else {
+        // stable (everyone matched)
+        iterationState.matches.push(iteration.matches)
+        if(iterationState.rejects.length > 0) {
+          iterationState.currentState = _constructNewState(iteration.reject, 'create')
+          iterationState.rejects.length = 0;
+          iterationState.iterationCount++;
+        } else {
+          // base case - everyone is matched
+          stableMatching = true;
+        }
+      }
+    };
+
+    return iterationState;
+  }
+
+  function _runIteration(db) {
+    // run iteration can return at any moment with a failed attempt,
+    // if so it will include the rejected users to be removed
+    let iteration = StableMatching.initAndRun(db);
+    if(iteration.failed) {
+      return {
+        failed: true,
+        rejects: iteration.rejects
+      }
+    } else {
+      return {
+        failed: false,
+        matches: iteration.matches
+      }
+    };
+  }
+
+  function _generateReport(entities) {
+    _.forIn(entities[0], (entity,id) => {
+      console.log("===============");
+      console.log("User: "+id);
+      console.log("Match: "+entity.choices[0].id);
+      console.log();
+    });
+  }
+
+  return {
+    setStore: function(data) {
+      _DATASTORE.initialState = data;
+    },
+    runDeepStableMatch: function() {
+     _drive();
+    },
+    getMatches: function(){
+      return _DATASTORE.finalMatches;
+    }
+    
+  };
+})(StableMatching);
+
+StableDriver.setStore(dummyDb);
+StableDriver.runDeepStableMatch();
 
 	// not needed for now
 	//
@@ -230,132 +416,3 @@ let StableMatching = (function () {
 	// 		person.choices.splice(remove, 1);
 	// 	});
 	// }
-
-  }
-
-  /**
-   * shared  methods
-   */
-
-  // eliminates two people from each others preference list
-  function eliminateChoices(rejecter, rejected) {
-    let remove1 =  _.findIndex(rejected.choices, function(p) { return p.id == rejecter.id; });
-    rejected.choices.splice(remove1, 1);
-    let remove2 =  _.findIndex(rejecter.choices, function(p) { return p.id == rejected.id; });
-    rejecter.choices.splice(remove2, 1);
-  }
-
-
-  /**
-   * availible public methods
-   * 
-   */
-  return {	
-    init: function(db) {
-      _DB = db;
-      _ORIGINAL = _.cloneDeep(db);
-    },
-    doStageOne: function() {
-      _proposalStage(1);
-      console.log("stage one done");
-    },
-    doStageTwo: function(){
-      _eliminateStage();
-      console.log("stage two done");
-    },
-    doStageThree: function() {
-      _cycleReduceStage();
-      console.log("stage three done");
-    },
-    getTestSet: function() {
-      return {
-        1:{id:1,choices:[{id:3, strength: 10},{id:4,strength: 8},{id:2, strength: 6},{id:6, strength: 4},{id:5, strength: 2}]},
-        2:{id:2,choices:[{id:6, strength: 10},{id:5,strength: 8},{id:4, strength: 6},{id:1, strength: 4},{id:3, strength: 2}]},
-        3:{id:3,choices:[{id:2, strength: 10},{id:4,strength: 8},{id:5, strength: 6},{id:1, strength: 4},{id:6, strength: 2}]},
-        4:{id:4,choices:[{id:5, strength: 10},{id:2,strength: 8},{id:3, strength: 6},{id:6, strength: 4},{id:1, strength: 2}]},
-        5:{id:5,choices:[{id:3, strength: 10},{id:1,strength: 8},{id:2, strength: 6},{id:4, strength: 4},{id:6, strength: 2}]},
-        6:{id:6,choices:[{id:5, strength: 10},{id:1,strength: 8},{id:3, strength: 6},{id:4, strength: 4},{id:2, strength: 2}]},
-      };
-    },
-    testStageOne: function() {
-      // TODO assert for each person that accepted received == that senders accepted sent
-    },
-    testStageTwo: function() {
-      // TODO assert off of test set
-    },
-    testStageThree: function() {
-      // TODO assert cycle reduction is working
-    },
-    runAllTests: function() {
-      let testDB = TestMatching.getTestSet();
-      TestMatching.init(testDB);
-      TestMatching.doStageOne();
-      TestMatching.testStageOne();
-      TestMatching.doStageTwo();
-      TestMatching.testStageTwo();
-      TestMatching.doStageThree();
-      TestMatching.testStageThree();
-    },
-    generateReport: function() {
-      let final = StableMatching.getFinalMatches();
-      let matches = 0;
-      let rejects = 0;
-      let rejectsList = [];
-      _.forIn(final, (p,k) =>{
-        if(p.choices.length == 1) {
-          matches ++;
-        } else if(p.choices.length == 0) {
-          rejectsList.push(''+p.id);
-          rejects ++;
-        } else {
-          console.log("ERROR: THIS SHOULDNT CALL ----");
-        }
-      });
-
-      
-      let org = StableMatching.getOriginal();
-
-      console.log("START")
-      console.log(Object.keys(org).length);  
-
-      _.forIn(org, (values,key) => {
-        if(rejectsList.indexOf(key) == -1) {
-          delete org[key];
-          _.forIn(org, (person,k) => {
-            let remove = _.findIndex(person.choices, function(p) { return p.id == parseInt(key,10); });
-            if(remove != -1) {
-              console.log("YABAB")
-            }
-            person.choices.splice(remove, 1);
-          });
-        }
-      });
-
-      console.log("FINSISH")
-      console.log(Object.keys(org).length);  
-
-      let recurse = _.cloneDeep(StableMatching);
-      recurse.init(org);
-
-      recurse.doStageOne();
-      recurse.doStageTwo();
-      recurse.doStageThree();
-      recurse.generateReport();  
-    },
-    getFinalMatches: function() {
-      return _DB;
-    },
-    getOriginal: function() {
-      return _ORIGINAL;
-    }
-  };
-
-})();
-
-
-let personPreferredLists = parseDb(dummyDb);
-StableMatching.init(personPreferredLists);
-StableMatching.doStageOne();
-StableMatching.doStageTwo();
-StableMatching.doStageThree();
-StableMatching.generateReport();
