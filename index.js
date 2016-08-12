@@ -188,7 +188,7 @@ let StableMatching = (function () {
 			if(person.choices.length === 0) {
 				return {
           stable: false,
-          rejected: person.id,
+          rejected: person,
           message: "There is an entity which has been rejected by all"
         };
 			}
@@ -293,7 +293,7 @@ let StableMatching = (function () {
 
 
 /**
- * 
+ * Stable Driver
  * 
  * 
  */
@@ -310,7 +310,7 @@ let StableDriver = (function (StableMatching) {
   function _drive() {
     let results = _iterationLoop(_DATASTORE.initialState);
     // TODO console.log result stats
-    _generateReport(results.matches)
+    _generateMatchReport(results.matches)
     _DATASTORE.finalMatches = results.matches;
   }
 
@@ -336,13 +336,13 @@ let StableDriver = (function (StableMatching) {
         
         iterationState.rejects.push(iteration.rejects)
         // construct a new state without rejects
-        iterationState.currentState = _constructNewState(iterations.reject, 'reduce');
+        iterationState.currentState = _reduceState(initialState.currentState, iteration.reject.id);
         iterationState.iterationCount++;
       } else {
         // stable (everyone matched)
         iterationState.matches.push(iteration.matches)
         if(iterationState.rejects.length > 0) {
-          iterationState.currentState = _constructNewState(iteration.reject, 'create')
+          iterationState.currentState = _createState(iterationState.rejects);
           iterationState.rejects.length = 0;
           iterationState.iterationCount++;
         } else {
@@ -353,6 +353,25 @@ let StableDriver = (function (StableMatching) {
     };
 
     return iterationState;
+  }
+
+
+  function _reduceState(state, rid) {
+		delete state[rid];
+		_.forIn(state, (person,key) => {
+			let removeIndex = _.findIndex(person.choices, function(p) { return p.id == rid; });
+			person.choices.splice(removeIndex, 1);
+		});
+    return state;
+  }
+
+  function _createState(set) {
+    set = _.orderBy(set,['id'],['asc']);
+    let newState = {};
+    _.each(set, (body,id)=> {
+      newState[id] = body;
+    });
+    return newState;
   }
 
   function _runIteration(db) {
@@ -372,12 +391,14 @@ let StableDriver = (function (StableMatching) {
     };
   }
 
-  function _generateReport(entities) {
-    _.forIn(entities[0], (entity,id) => {
-      console.log("===============");
-      console.log("User: "+id);
-      console.log("Match: "+entity.choices[0].id);
-      console.log();
+  function _generateMatchReport(matches) {
+    _.each(matches, matchList => {
+       _.forIn(matchList, (entity,id) => {
+        console.log("===============");
+        console.log("User: " + id);
+        console.log("Match: " + entity.choices[0].id);
+        console.log();
+      });
     });
   }
 
@@ -408,11 +429,4 @@ StableDriver.runDeepStableMatch();
 	// 		}
 	// 	});
 	// }
-	// function deleteFromPool(rid) {
-	// 	_REMOVED[rid] = _.cloneDeep(_DB[rid]);
-	// 	delete _DB[rid];
-	// 	_.forIn(_DB, (person,key) => {
-	// 		let remove = _.findIndex(person.choices, function(p) { return p.id == rid; });
-	// 		person.choices.splice(remove, 1);
-	// 	});
-	// }
+	
