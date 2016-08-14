@@ -132,6 +132,11 @@ let StableMatching = (function () {
             q = _DB[ p.choices[1].id ]; 
           } 
 
+          let stability2 = stablilityCheck();
+          if(!stability2.stable) {
+            throw new StabilityException(stability);
+          }
+
           let newPair = [p,q];
 
 	        // look for a cycle in cyclePairs before pushing into it, check the new p to see if its reoccured
@@ -188,7 +193,6 @@ let StableMatching = (function () {
   // checks the data state for anyone with no choices remaining
   function stablilityCheck() {
     let rejected = false;
-
 		_.forIn(_DB, (person, key) => {
 			if(person.choices.length == 0) {
         rejected = (rejected != false) ? rejected : person.id;
@@ -218,7 +222,8 @@ let StableMatching = (function () {
 
   return {	
     init: function(db) {
-      _DB = db;
+      //let test = StableMatching.getTestSet()
+      _DB = _.cloneDeep(db);
     },
     doStageOne: function() {
       return _proposalStage(1);
@@ -331,8 +336,8 @@ let StableDriver = (function (StableMatching) {
   function _iterationLoop(initialState) {
     
     let iterationState = {
-      initialState: initialState,
-      currentState: initialState,
+      initialState: _.cloneDeep(initialState),
+      currentState: _.cloneDeep(initialState),
       iterationCount: 0, 
       matches: [],
       rejects: []
@@ -347,15 +352,18 @@ let StableDriver = (function (StableMatching) {
       if (iteration.failed) {
         // unstable
         // keep track of rejections
-        iterationState.rejects.push(iteration.rejects)
+        iterationState.rejects.push(iteration.reject)
         // construct a new state without rejects
-        iterationState.currentState = _reduceState(iterationState.currentState, iteration.reject);
+        iterationState.currentState = _reduceState(iterationState.initialState, iterationState.rejects);
         iterationState.iterationCount++;
       } else {
         // stable (everyone matched)
-        iterationState.matches.push(iteration.matches)
+        iterationState.matches.push(iteration.matches);
+        _.each(iterationState.matches[0], person => {
+          console.log(person)
+        })
         if(iterationState.rejects.length > 0) {
-          iterationState.currentState = _createState(iterationState.rejects);
+          iterationState.currentState = _createState(iterationState.initialState, iterationState.rejects);
           iterationState.rejects.length = 0;
           iterationState.iterationCount++;
         } else {
@@ -369,26 +377,32 @@ let StableDriver = (function (StableMatching) {
   }
 
 
-  function _reduceState(state, rid) {
-    // delete user from new state
-		delete state[rid];
-		_.forIn(state, (person,key) => {
-      // reset person keys
-      person.hasAcceptedReceivedProposal = false; 
-      person.hasAcceptedSentProposal = false;                                                                                           
-      delete person.acceptedReceivedRank;                                                                                                    
-      delete person.acceptedReceivedID;                                                                                                                                                                                                 
-      delete person.acceptedSentRank;                                                                                                         
-      delete person.acceptedSentID;
-      // deleted reject from this list
-			let removeIndex = _.findIndex(person.choices, function(p) { return p.id == rid; });
-			person.choices.splice(removeIndex, 1);
-		});
 
+  function _reduceState(oldState, rejects) {
+    let state = _.cloneDeep(oldState);
+    console.log("Here " + rejects.length)
+    _.each(rejects, rid => {
+      // delete user from new state
+		  delete state[rid];
+      _.forIn(state, (person,key) => {
+        // reset person keys
+        person.hasAcceptedReceivedProposal = false; 
+        person.hasAcceptedSentProposal = false;                                                                                           
+        delete person.acceptedReceivedRank;                                                                                                    
+        delete person.acceptedReceivedID;                                                                                                                                                                                                 
+        delete person.acceptedSentRank;                                                                                                         
+        delete person.acceptedSentID;
+        // deleted reject from this list
+        let removeIndex = _.findIndex(person.choices, function(p) { return p.id == rid; });
+        person.choices.splice(removeIndex, 1);
+      });
+    });
+    
     return state;
   }
 
   function _createState(set) {
+    console.log("SHOULD CAUSE PROBLEMS")
     set = _.orderBy(set,['id'],['asc']);
     let newState = {};
     _.each(set, (body,id)=> {
