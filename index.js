@@ -41,6 +41,11 @@ let StableMatching = (function () {
       // we now need to check to see if the receiver has accepted proposals and 
       // how the receiver ranks the sender of the proposal 
       let indexOfsender = _.findIndex(receiver.choices, p => { return p.id == sender.id; });
+      if(!receiver.choices[indexOfsender]){
+        console.log("From:"+sender.id)
+        console.log("To: "+receiver.id)
+        console.log(receiver.choices)
+      }
       // create shortcut to senders object in receiver's list
       let senderRank = receiver.choices[indexOfsender].strength;
       if(receiver.hasAcceptedReceivedProposal) {
@@ -195,7 +200,7 @@ let StableMatching = (function () {
     let rejected = false;
 		_.forIn(_DB, (person, key) => {
 			if(person.choices.length == 0) {
-        rejected = (rejected != false) ? rejected : person.id;
+        rejected = (rejected != false) ? rejected : person;
 			}
 		});
 
@@ -285,8 +290,9 @@ let StableMatching = (function () {
         StableMatching.doStageThree();
       } catch(errorResults) {
         // return the failed
-        console.log(errorResults)
         if(!errorResults.rejected){
+          console.log("UNEXPECTED ERROR: ");
+          console.log(errorResults);
           throw errorResults;
         }
         return {
@@ -346,7 +352,6 @@ let StableDriver = (function (StableMatching) {
     let stableMatching = false;
     
     while(!stableMatching) {
-      
       let iteration = _runIteration(iterationState.currentState);
 
       if (iteration.failed) {
@@ -358,12 +363,13 @@ let StableDriver = (function (StableMatching) {
         iterationState.iterationCount++;
       } else {
         // stable (everyone matched)
-        iterationState.matches.push(iteration.matches);
-        _.each(iterationState.matches[0], person => {
-          console.log(person)
-        })
+        _.forIn(iteration.matches, entity => {
+          iterationState.matches.push(entity);
+        });
+        // check for remaining unmatched
         if(iterationState.rejects.length > 0) {
-          iterationState.currentState = _createState(iterationState.initialState, iterationState.rejects);
+          iterationState.currentState = _reduceState(iterationState.initialState, iterationState.matches);
+          console.log("rejects remain: " + Object.keys(iterationState.currentState).length) 
           iterationState.rejects.length = 0;
           iterationState.iterationCount++;
         } else {
@@ -377,39 +383,72 @@ let StableDriver = (function (StableMatching) {
   }
 
 
-
-  function _reduceState(oldState, rejects) {
+  function _reduceState(oldState, removeList) {
     let state = _.cloneDeep(oldState);
-    console.log("Here " + rejects.length)
-    _.each(rejects, rid => {
+    console.log("MINUS#: " + removeList.length)
+    let map = Object.keys(state)
+    let index = 1;
+    let good = false;
+    while(!good){
+      let q = _.findIndex(removeList, r => {return r.id == index})
+      if(q != -1) {
+        index++;
+      } else {
+        good = true;
+      }
+    }
+
+    let test = state[index];
+    console.log("START: " + test.choices.length)
+    _.each(removeList, r => {
+      if(r.id == index) {
+        console.log("WHAT THE FUNCKKK =--------------")
+      }
       // delete user from new state
-		  delete state[rid];
-      _.forIn(state, (person,key) => {
+		  delete state[r.id];
+      _.forIn(state, (entity,key) => {
         // reset person keys
-        person.hasAcceptedReceivedProposal = false; 
-        person.hasAcceptedSentProposal = false;                                                                                           
-        delete person.acceptedReceivedRank;                                                                                                    
-        delete person.acceptedReceivedID;                                                                                                                                                                                                 
-        delete person.acceptedSentRank;                                                                                                         
-        delete person.acceptedSentID;
+        entity.hasAcceptedReceivedProposal = false; 
+        entity.hasAcceptedSentProposal = false;                                                                                           
+        delete entity.acceptedReceivedRank;                                                                                                    
+        delete entity.acceptedReceivedID;                                                                                                                                                                                                 
+        delete entity.acceptedSentRank;                                                                                                         
+        delete entity.acceptedSentID;
         // deleted reject from this list
-        let removeIndex = _.findIndex(person.choices, function(p) { return p.id == rid; });
-        person.choices.splice(removeIndex, 1);
+        let removeIndex = _.findIndex(entity.choices, e => { return e.id == r.id; });
+        entity.choices.splice(removeIndex, 1);
       });
     });
     
+    console.log("FINSISH: " + test.choices.length)
     return state;
   }
 
-  function _createState(set) {
-    console.log("SHOULD CAUSE PROBLEMS")
-    set = _.orderBy(set,['id'],['asc']);
-    let newState = {};
-    _.each(set, (body,id)=> {
-      newState[id] = body;
-    });
-    return newState;
-  }
+  // function _createState(oldState, newSet, withhold) {
+  //   let state = _.cloneDeep(oldState);
+  //   _.forIn(state, (entity, key) => {
+  //     if(newSet.indexOf(parseInt(key,10)) == -1 || _.findIndex(withhold, e => { return e.id == parseInt(key,10) }) != -1 ){
+  //       // this entity was already matched
+  //       delete state[key];
+  //     } else {
+  //       // entity still needs to be matched and its match list must as well
+  //       let i = entity.choices.length
+  //       while (i--) {
+  //         // check1 is another reject, check2 looks to see if match
+  //         let check1 = newSet.indexOf(parseInt(entity.choices[i].id,10)); // if -1 we will remove from choices
+  //         let check2 = _.findIndex(withhold, e => { return e.id == i })
+  //         if(check1 == -1 || check2 != -1) {
+  //           entity.choices.splice(i, 1);
+  //         }
+  //         if(entity.choices.length == 0) {
+  //           console.log("ALERT")
+  //         }
+  //       }
+  //     }
+  //   });
+  //   console.log("FOREVER " + Object.keys(state).length)
+  //   return state;
+  // }
 
   function _runIteration(db) {
     // run iteration can return at any moment with a failed attempt,

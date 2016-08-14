@@ -145,9 +145,9 @@ function parseDb(db) {
       }
     };
     output[db[i].id].choices = _.orderBy(output[db[i].id].choices,['strength'],['desc']);
-
     i++;
   };	
+
   return output; 
 }
 
