@@ -20,25 +20,25 @@ let StableMatching = (function () {
    * - recursive until everone has accepted proposal
    */
   function _proposalStage(){
-    let remain = Object.keys(_DB);
-    let i = remain[0];
-
-    if(i && i != undefined) {
-      let sender = _DB[i];
-      if(sender) {
-        if(!sender.hasAcceptedSentProposal) {
-          // stability check before hand
-          let stability = stablilityCheck();
-          if(!stability.stable) {
-            throw new StabilityException(stability);
-          }
-          // need to go through proposal stages for this person and their preferences
-          // next offer is first choice in preference list that hasn't been proposed to yet
-          // send offer to that person, propose Offer will accept or reject the offer
-          proposalProcess( sender, _DB[sender.choices[0].id], sender.choices[0].strength );
+    let allProposed = false;
+    while(!allProposed) {
+      let i = _.findKey(_DB,entity => {return !entity.hasAcceptedSentProposal});
+      if(i != -1 && i != undefined) {
+        let sender = _DB[i];
+        // stability check before hand
+        let stability = stablilityCheck();
+        if(!stability.stable) {
+          throw new StabilityException(stability);
         }
+        // need to go through proposal stages for this person and their preferences
+        // next offer is first choice in preference list that hasn't been proposed to yet
+        // send offer to that person, propose Offer will accept or reject the offer
+        proposalProcess( sender, _DB[sender.choices[0].id], sender.choices[0].strength );
+      } else {
+        allProposed = true;
       }
-    }
+    };
+    
 
     // iterates over the process of sending, accepting, and rejecting proposals
     function proposalProcess(sender, receiver, receiverRank) {
@@ -46,14 +46,10 @@ let StableMatching = (function () {
       // how the receiver ranks the sender of the proposal 
       let indexOfsender = _.findIndex(receiver.choices, p => { return p.id == sender.id; });
       // create shortcut to senders object in receiver's list
-      if(!receiver.choices[indexOfsender]) {
-        console.log("RECIEVER: " + receiver.id)
-        console.log("SENDER: " + sender.id)
-      }
       let senderRank = receiver.choices[indexOfsender].strength;
       if(receiver.hasAcceptedReceivedProposal) {
 	      // need to compare against accept proposal
-        if(receiver.acceptedReceivedRank < senderRank) {
+        if(receiver.acceptedReceivedRank > senderRank) {
 	        // rejected because offer has already been accept by someone with higher preference
           rejectOffer(sender, receiver);
         } else {
@@ -87,11 +83,6 @@ let StableMatching = (function () {
       sender.acceptedSentRank = -1;
       sender.acceptedSentID = -1;
       eliminateChoices(sender, receiver);
-      // the function now reruns until sender can send a successful proposal
-      // let node clear call-stack
-      setTimeout(function() {
-        _proposalStage();
-      },100)
     }
 
   }
@@ -197,9 +188,9 @@ let StableMatching = (function () {
   // eliminates two people from each others preference list
   function eliminateChoices(sender, receiver) {
     let remove1 =  _.findIndex(sender.choices, function(p) { return p.id == receiver.id; });
-    let rjr = sender.choices.splice(remove1, 1);
+    sender.choices.splice(remove1, 1);
     let remove2 =  _.findIndex(receiver.choices, function(p) { return p.id == sender.id; });
-    let rdd = receiver.choices.splice(remove2, 1);
+    receiver.choices.splice(remove2, 1);
   }
 
   // checks the data state for anyone with no choices remaining
@@ -234,8 +225,8 @@ let StableMatching = (function () {
 
   return {	
     init: function(db) {
-      //let test = StableMatching.getTestSet()
-      _DB = _.cloneDeep(db);
+      let test = StableMatching.getTestSet()
+      _DB = _.cloneDeep(test);
     },
     doStageOne: function() {
       return _proposalStage();
@@ -359,17 +350,15 @@ let StableDriver = (function (StableMatching) {
     let stableMatching = false;
     
     while(!stableMatching) {
-      if(iterationState.matches.length > 104) {
-        _.each(iterationState.matches, m => {
-          console.log("================");
-          console.log(m.id)
-          console.log(m.choices);
-          console.log();
-        })
-      }
+      // if(iterationState.matches.length > 104) {
+      //   _.each(iterationState.matches, m => {
+      //     console.log("================");
+      //     console.log(m.id)
+      //     console.log(m.choices);
+      //     console.log();
+      //   })
+      // }
       let iteration = _runIteration(iterationState.currentState);   
-      // console.log(iterationState.currentState[7].id,_.findIndex(iterationState.currentState[7].choices, c => {return c.id == 94}));
-      // console.log(iterationState.currentState[94].id,_.findIndex(iterationState.currentState[94].choices, c => {return c.id == 7}));
       if (iteration.failed) {
         // unstable
         // keep track of rejections
@@ -386,7 +375,6 @@ let StableDriver = (function (StableMatching) {
         if(iterationState.rejects.length > 0) {
           console.log("MATCH ITERATION FOUND, NOT DONE ==============")
           console.log("MATCHES:  " + iterationState.matches.length)
-          console.log("REMAIN:  " + iterationState.rejects.length)
           iterationState.currentState = _reduceState(iterationState.initialState, iterationState.matches);
           iterationState.rejects.length = 0;
           iterationState.iterationCount++;
@@ -408,7 +396,6 @@ let StableDriver = (function (StableMatching) {
 		  delete state[r.id];
       _.forIn(state, (entity,key) => {
         // reset person keys
-        
         entity.hasAcceptedReceivedProposal = false; 
         entity.hasAcceptedSentProposal = false;                                                                                           
         delete entity.acceptedReceivedRank;                                                                                                    
@@ -423,32 +410,6 @@ let StableDriver = (function (StableMatching) {
 
     return state;
   }
-
-  // function _createState(oldState, newSet, withhold) {
-  //   let state = _.cloneDeep(oldState);
-  //   _.forIn(state, (entity, key) => {
-  //     if(newSet.indexOf(parseInt(key,10)) == -1 || _.findIndex(withhold, e => { return e.id == parseInt(key,10) }) != -1 ){
-  //       // this entity was already matched
-  //       delete state[key];
-  //     } else {
-  //       // entity still needs to be matched and its match list must as well
-  //       let i = entity.choices.length
-  //       while (i--) {
-  //         // check1 is another reject, check2 looks to see if match
-  //         let check1 = newSet.indexOf(parseInt(entity.choices[i].id,10)); // if -1 we will remove from choices
-  //         let check2 = _.findIndex(withhold, e => { return e.id == i })
-  //         if(check1 == -1 || check2 != -1) {
-  //           entity.choices.splice(i, 1);
-  //         }
-  //         if(entity.choices.length == 0) {
-  //           console.log("ALERT")
-  //         }
-  //       }
-  //     }
-  //   });
-  //   console.log("FOREVER " + Object.keys(state).length)
-  //   return state;
-  // }
 
   function _runIteration(db) {
     // run iteration can return at any moment with a failed attempt,
@@ -469,13 +430,10 @@ let StableDriver = (function (StableMatching) {
   }
 
   function _generateMatchReport(matches) {
-    _.each(matches, matchList => {
-       _.forIn(matchList, (entity,id) => {
-        console.log("===============");
-        console.log("User: " + id);
-        console.log("Match: " + entity.choices[0].id);
-        console.log();
-      });
+    _.each(matches, match => {
+      console.log("===================")
+      console.log(match.id)
+      console.log(match.choices[0])
     });
   }
 
