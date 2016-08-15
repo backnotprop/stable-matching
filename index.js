@@ -10,6 +10,8 @@ let dummyDb = require('./dummyDB');
  * StableMatching
  * 
  * - Irvings Algorithim for Stable Roomate Problem 
+ * - non iterative, will fail on unstability
+ * - use custom driver below to find full stable results
  */
 let StableMatching = (function () {
   let _DB;
