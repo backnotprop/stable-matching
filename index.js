@@ -225,8 +225,8 @@ let StableMatching = (function () {
 
   return {	
     init: function(db) {
-      let test = StableMatching.getTestSet()
-      _DB = _.cloneDeep(test);
+      // let test = StableMatching.getTestSet()
+      _DB = _.cloneDeep(db);
     },
     doStageOne: function() {
       return _proposalStage();
@@ -365,6 +365,7 @@ let StableDriver = (function (StableMatching) {
         iterationState.rejects.push(iteration.reject)
         // construct a new state without rejects
         iterationState.currentState = _reduceState(iterationState.initialState, iterationState.rejects);
+        iterationState.matches.length = 0;
         iterationState.iterationCount++;
       } else {
         // stable (everyone matched)
