@@ -39,7 +39,6 @@ let StableMatching = (function () {
       }
     };
     
-
     // iterates over the process of sending, accepting, and rejecting proposals
     function proposalProcess(sender, receiver, receiverRank) {
       // we now need to check to see if the receiver has accepted proposals and 
@@ -309,27 +308,27 @@ let StableMatching = (function () {
       return _DB;
     }
   };
-
 })();
-
-
 
 
 /**
  * Stable Driver
- * 
+ * - managers the running of the stable match algorithim 
  * 
  */
 let StableDriver = (function (StableMatching) {
   
   /**
-   * 
-   **/
+   * driver-conserned state
+   */
   let _DATASTORE = {
     initialState: {},
     finalMatches: []
   };
 
+  /**
+   * controls iteration loop and returns final matches
+   */
   function _drive() {
     let results = _iterationLoop(_DATASTORE.initialState);
     // TODO console.log result stats
@@ -337,6 +336,9 @@ let StableDriver = (function (StableMatching) {
     _DATASTORE.finalMatches = results.matches;
   }
 
+  /**
+   * continuously runs iterations until stable matching
+   */
   function _iterationLoop(initialState) {
     
     let iterationState = {
@@ -350,14 +352,6 @@ let StableDriver = (function (StableMatching) {
     let stableMatching = false;
     
     while(!stableMatching) {
-      // if(iterationState.matches.length > 104) {
-      //   _.each(iterationState.matches, m => {
-      //     console.log("================");
-      //     console.log(m.id)
-      //     console.log(m.choices);
-      //     console.log();
-      //   })
-      // }
       let iteration = _runIteration(iterationState.currentState);   
       if (iteration.failed) {
         // unstable
@@ -374,8 +368,6 @@ let StableDriver = (function (StableMatching) {
         });
         // check for remaining unmatched
         if(iterationState.rejects.length > 0) {
-          console.log("MATCH ITERATION FOUND, NOT DONE ==============")
-          console.log("MATCHES:  " + iterationState.matches.length)
           iterationState.currentState = _reduceState(iterationState.initialState, iterationState.matches);
           iterationState.rejects.length = 0;
           iterationState.iterationCount++;
@@ -389,7 +381,9 @@ let StableDriver = (function (StableMatching) {
     return iterationState;
   }
 
-
+  /**
+   * produces a new state for a new iteration
+   */
   function _reduceState(oldState, removeList) {
     let state = _.cloneDeep(oldState);
     _.each(removeList, r => {
@@ -412,6 +406,9 @@ let StableDriver = (function (StableMatching) {
     return state;
   }
 
+  /*
+   * runs a new iteration
+   */
   function _runIteration(db) {
     // run iteration can return at any moment with a failed attempt,
     // if so it will include the rejected users to be removed
@@ -430,6 +427,9 @@ let StableDriver = (function (StableMatching) {
     };
   }
 
+  /**
+   * generates report after successful stable matching
+   */
   function _generateMatchReport(matches) {
     _.each(matches, match => {
       console.log("===================")
@@ -454,15 +454,3 @@ let StableDriver = (function (StableMatching) {
 
 StableDriver.setStore(dummyDb);
 StableDriver.runDeepStableMatch();
-
-	// not needed for now
-	//
-	// function removeRejects() {
-	// 	_.forIn(_DB, (person, key) => {
-	// 		if(person.choices.length < 1) {
-	// 			console.log("HEY ==> " + person.id)
-	// 			deleteFromPool(person.id)
-	// 		}
-	// 	});
-	// }
-	
