@@ -3,7 +3,7 @@
 // utility library
 let _ = require('lodash');
 // our testing DB of users 
-let dummyDb = require('./dummy_db');
+let dummyDb = require('./dummyDB');
 
 
 /**
@@ -263,7 +263,7 @@ let StableMatching = (function () {
       let db = StableMatching.getFinalMatches();
       let check = true;
       _.forIn(db, (person,key) => {
-        _.each(person.match, match => {
+        _.each(person.choices, match => {
           if(db[match.id].matches.indexOf(person.id) == -1) {
             check = false;
           }
@@ -359,15 +359,13 @@ let StableDriver = (function (StableMatching) {
     let stableMatching = false;
     
     while(!stableMatching) {
-       if( iterationState.currentState[7] && iterationState.currentState[94] ) {
-        if(_.findIndex(iterationState.currentState[7].choices, c => {return c.id == 94}) == -1 && _.findIndex(iterationState.currentState[94].choices, c => {return c.id == 7}) != -1)  {
-          console.log("START: ")
-          console.log("7 doesnt have 94, but 94 has 7")
-          // _.each(iterationState.matches, m => {
-          //   console.log(m.id)
-          // })
-          console.log()
-        }
+      if(iterationState.matches.length > 104) {
+        _.each(iterationState.matches, m => {
+          console.log("================");
+          console.log(m.id)
+          console.log(m.choices);
+          console.log();
+        })
       }
       let iteration = _runIteration(iterationState.currentState);   
       // console.log(iterationState.currentState[7].id,_.findIndex(iterationState.currentState[7].choices, c => {return c.id == 94}));
