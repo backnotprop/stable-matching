@@ -2,6 +2,7 @@
 
 // utility library
 let _ = require('lodash');
+let deepFreeze = require('deep-freeze');
 // our testing DB of users 
 let dummyDb = require('./dummyDB');
 
@@ -45,6 +46,12 @@ let StableMatching = (function () {
       // how the receiver ranks the sender of the proposal 
       let indexOfsender = _.findIndex(receiver.choices, p => { return p.id == sender.id; });
       // create shortcut to senders object in receiver's list
+      if(!receiver.choices[indexOfsender]){
+        console.log(" --- LIST MISMATCH ERROR ---");
+        console.log("TO "+receiver.id);
+        console.log("FROM "+sender.id);
+        console.log(JSON.stringify(_DB))
+      }
       let senderRank = receiver.choices[indexOfsender].strength;
       if(receiver.hasAcceptedReceivedProposal) {
 	      // need to compare against accept proposal
@@ -129,7 +136,7 @@ let StableMatching = (function () {
 	        // redefine p and q during the iterative process
           p = _DB[q.choices[q.choices.length - 1 ].id];
           if(_.isUndefined(p.choices[1]) || p.choices.length == 0){
-            q = _DB[ p.choices[0].id ]
+            q = _DB[ p.choices[0].id ];
           } else {
             q = _DB[ p.choices[1].id ]; 
           } 
@@ -331,9 +338,8 @@ let StableDriver = (function (StableMatching) {
    */
   function _drive() {
     let results = _iterationLoop(_DATASTORE.initialState);
-    // TODO console.log result stats
-    _generateMatchReport(results.matches)
     _DATASTORE.finalMatches = results.matches;
+    _generateMatchReport( _DATASTORE.finalMatches);
   }
 
   /**
@@ -341,24 +347,38 @@ let StableDriver = (function (StableMatching) {
    */
   function _iterationLoop(initialState) {
     
+    //  initial state needs to be immutable
+    let _INITIALSTATE = _.cloneDeep(initialState);
+    deepFreeze(_INITIALSTATE);
+
     let iterationState = {
-      initialState: _.cloneDeep(initialState),
-      currentState: _.cloneDeep(initialState),
-      iterationCount: 0, 
-      matches: [],
-      rejects: []
+      currentState: _.cloneDeep(initialState), // starting state
+      iterationCount: 0, // number of iterations ran
+      matches: [], // keeps track of all matches
+      rejects: [], // keeps track of rejects during an iteration
+      excluded: [], // totally rejected (when preferences aren't fullfilled)
     };
    
     let stableMatching = false;
     
     while(!stableMatching) {
+      // console.log(`----STARTING NEW ITERATION #${iterationState.iterationCount} ----`);
+      // _.each(iterationState.matches, m => {
+      //   console.log(`${iterationState.iterationCount} MATCH: `+ m.id)
+      // })
+      // _.each(iterationState.rejects, r => {
+      //   console.log(`${iterationState.iterationCount} REJECT: `+ r.id)
+      // })
+      // // let preparedState = _prepAndConfirmState(interationState.currentState)
+      // console.log(JSON.stringify(iterationState.currentState))
+      // console.log(`----**********************----`);
       let iteration = _runIteration(iterationState.currentState);   
       if (iteration.failed) {
         // unstable
         // keep track of rejections
         iterationState.rejects.push(iteration.reject)
         // construct a new state without rejects
-        iterationState.currentState = _reduceState(iterationState.initialState, iterationState.rejects);
+        iterationState.currentState = _reduceState(_INITIALSTATE, iterationState.rejects);
         iterationState.matches.length = 0;
         iterationState.iterationCount++;
       } else {
@@ -368,9 +388,18 @@ let StableDriver = (function (StableMatching) {
         });
         // check for remaining unmatched
         if(iterationState.rejects.length > 0) {
-          iterationState.currentState = _reduceState(iterationState.initialState, iterationState.matches);
-          iterationState.rejects.length = 0;
-          iterationState.iterationCount++;
+          // there needs to be a total rejection check now
+          // if rejects do not prefer each other, then they will break the algorithim
+          if(possibiltyRemainCheck(iterationState.rejects)){
+            // there are matches, but rejects remain and need to be matched as well
+            iterationState.currentState = _reduceState(_INITIALSTATE, iterationState.matches);
+            iterationState.rejects.length = 0;
+            iterationState.iterationCount++;
+          }
+          else {
+            // second optimal base case - there are matches, but some people were unable to be matched
+            stableMatching = true;
+          }
         } else {
           // base case - everyone is matched
           stableMatching = true;
@@ -386,6 +415,7 @@ let StableDriver = (function (StableMatching) {
    */
   function _reduceState(oldState, removeList) {
     let state = _.cloneDeep(oldState);
+
     _.each(removeList, r => {
       // delete user from new state
 		  delete state[r.id];
@@ -398,8 +428,11 @@ let StableDriver = (function (StableMatching) {
         delete entity.acceptedSentRank;                                                                                                         
         delete entity.acceptedSentID;
         // deleted reject from this list
-        let removeIndex = _.findIndex(entity.choices, e => { return e.id == r.id; });
-        entity.choices.splice(removeIndex, 1);
+        let removeIndex = _.findIndex(entity.choices, c => { return c.id == r.id; });
+        // some lists may not include that choice any longer
+        if(removeIndex != -1) {
+          entity.choices.splice(removeIndex, 1);
+        }
       });
     });
 
@@ -438,6 +471,41 @@ let StableDriver = (function (StableMatching) {
     });
   }
 
+  /**
+   * make's sure is preped properly before running through an iteration
+   */
+  function _prepAndConfirmState(state) {
+    // those going in need to remain in everyone else's preference lists
+    let totalRejects =  _totalRejectLookup(state);
+    if(totalRejects.length === 0){
+      return state;
+    } else {
+      // run reduce state without them
+      // return reduce state function
+    }
+
+    
+  }
+
+  /**
+   * looks for total rejects (those who no longer remain in anyones prefernence list)
+   */ 
+  function _totalRejectLookup(state) {
+    let totalRejects = [];
+    _.forIn(state, (entity,key) => {
+      // check that choices remain
+      if(entity.choices.length === 0) {
+        // all choices have been removed and matched elsewhere 
+        totalRejects.push(entity);
+      } else {
+        // iterate over entities choices
+        _.forEach(entity.choices, c => {
+          // check tht
+        });
+      }
+    });
+  }
+
   return {
     setStore: function(data) {
       _DATASTORE.initialState = data;
@@ -448,9 +516,16 @@ let StableDriver = (function (StableMatching) {
     getMatches: function(){
       return _DATASTORE.finalMatches;
     }
-    
   };
 })(StableMatching);
 
-StableDriver.setStore(dummyDb);
+let testSet = {
+  "300": {"id":300,"choices":[{"id":302,"strength":4},{"id":303,"strength":3},{"id":318,"strength":2},{"id":304,"strength":1}]},
+  "301":{"id":301,"choices":[{"id":302,"strength":4},{"id":303,"strength":3},{"id":304,"strength":2},{"id":318,"strength":1}]},
+  "302":{"id":302,"choices":[{"id":301,"strength":4},{"id":303,"strength":3},{"id":300,"strength":2},{"id":304,"strength":1}]},
+  "303":{"id":303,"choices":[{"id":301,"strength":4},{"id":300,"strength":3},{"id":318,"strength":2},{"id":302,"strength":1}]},
+  "304":{"id":304,"choices":[{"id":300,"strength":3},{"id":301,"strength":2},{"id":302,"strength":1}]},
+  "318":{"id":318,"choices":[{"id":300,"strength":3},{"id":301,"strength":2},{"id":303,"strength":1}]}
+};
+StableDriver.setStore(testSet);
 StableDriver.runDeepStableMatch();

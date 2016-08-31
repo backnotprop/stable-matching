@@ -12,10 +12,10 @@
     "url": "https://github.com/mdramos/stable-matching/issues"
   },
   "dependencies": {
+    "deep-freeze": "0.0.1",
     "lodash": "^4.14.1"
   },
   "devDependencies": {
     "eslint": "^2.11.1"
   }
-  
 }
