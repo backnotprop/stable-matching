@@ -11,6 +11,8 @@ let dummyDb = require('./dummyDB');
  * StableMatching
  * 
  * - Irvings Algorithim for Stable Roomate Problem 
+ * - non iterative, will fail on unstability
+ * - use custom driver below to find full stable results
  */
 let StableMatching = (function () {
   let _DB;
@@ -54,12 +56,12 @@ let StableMatching = (function () {
       }
       let senderRank = receiver.choices[indexOfsender].strength;
       if(receiver.hasAcceptedReceivedProposal) {
-	      // need to compare against accept proposal
+	// need to compare against accept proposal
         if(receiver.acceptedReceivedRank > senderRank) {
-	        // rejected because offer has already been accept by someone with higher preference
+	  // rejected because offer has already been accept by someone with higher preference
           rejectOffer(sender, receiver);
         } else {
-	        // define rejected before received accepts a new offer
+	  // define rejected before received accepts a new offer
           let rejected = _DB[receiver.acceptedReceivedID].id;
           acceptOffer(sender, receiver, receiverRank, senderRank);
           // accepted because the sender outranks the previously accepted proposal
@@ -67,7 +69,7 @@ let StableMatching = (function () {
           rejectOffer(_DB[rejected], receiver);
         } 
       } else {
-	      // accepted because he does not have any accepted proposal
+	// accepted because he does not have any accepted proposal
         acceptOffer(sender, receiver, receiverRank, senderRank);
       }
     }
@@ -83,7 +85,6 @@ let StableMatching = (function () {
     }
 
     // sender is denied proposal
-
     function rejectOffer(sender,receiver) {
       sender.hasAcceptedSentProposal = false;
       sender.acceptedSentRank = -1;
@@ -101,7 +102,7 @@ let StableMatching = (function () {
     _.forIn(_DB, (person,id) => {
       let keepLast = _.findIndex(person.choices, p => { return p.id == person.acceptedReceivedID; });
       for(let i = keepLast + 1; i < person.choices.length; i++) {
-	      // each the rejected and rejecter can remove each other from choices list
+	// each the rejected and rejecter can remove each other from choices list
         eliminateChoices(person, _DB[person.choices[i].id]);
       }
     });
@@ -124,7 +125,7 @@ let StableMatching = (function () {
        
         let currentPair = [p,q];
         let cyclePairs = [currentPair]; // first pair in cycle
-  	    // cyclic reduction
+  	// cyclic reduction
         let cycle = false;
         while(!cycle) {
           // need to check stability at this point
@@ -133,7 +134,7 @@ let StableMatching = (function () {
             throw new StabilityException(stability);
           }
 
-	        // redefine p and q during the iterative process
+	  // redefine p and q during the iterative process
           p = _DB[q.choices[q.choices.length - 1 ].id];
           if(_.isUndefined(p.choices[1]) || p.choices.length == 0){
             q = _DB[ p.choices[0].id ];
@@ -148,14 +149,14 @@ let StableMatching = (function () {
 
           let newPair = [p,q];
 
-	        // look for a cycle in cyclePairs before pushing into it, check the new p to see if its reoccured
+	  // look for a cycle in cyclePairs before pushing into it, check the new p to see if its reoccured
           let spotCycle = _.findIndex(cyclePairs, (pair) => { return pair[0].id == p.id; });
           cyclePairs.push(newPair);
 
-	        // there was a cycle found, go through with the diagnal elimination phase
+	  // there was a cycle found, go through with the diagnal elimination phase
           if ( spotCycle != -1 ) {
             cycle = true;
-  	        // cycle pairs should start where the cycle was found
+  	    // cycle pairs should start where the cycle was found
             cyclePairs.splice(0,spotCycle);
             eliminateDiagnals(cyclePairs);
           }
@@ -180,7 +181,7 @@ let StableMatching = (function () {
     function eliminateDiagnals(pairs) {
       // start at second element for diagnal rejection
       for(let i = 1; i < pairs.length; i++) {
-	      // the [i - 1][1] creates the diagnal effect
+	// the [i - 1][1] creates the diagnal effect
         eliminateChoices(_DB[pairs[i][0].id],_DB[pairs[i - 1][1].id]);
       }
     }
@@ -202,11 +203,11 @@ let StableMatching = (function () {
   // checks the data state for anyone with no choices remaining
   function stablilityCheck() {
     let rejected = false;
-		_.forIn(_DB, (person, key) => {
-			if(person.choices.length == 0) {
-        rejected = (rejected != false) ? rejected : person;
-			}
-		});
+    _.forIn(_DB, (person, key) => {
+	if(person.choices.length == 0) {
+            rejected = (rejected != false) ? rejected : person;
+	}
+    });
 
     if(!rejected) {
       return {
@@ -418,7 +419,7 @@ let StableDriver = (function (StableMatching) {
 
     _.each(removeList, r => {
       // delete user from new state
-		  delete state[r.id];
+      delete state[r.id];
       _.forIn(state, (entity,key) => {
         // reset person keys
         entity.hasAcceptedReceivedProposal = false; 
@@ -528,4 +529,6 @@ let testSet = {
   "318":{"id":318,"choices":[{"id":300,"strength":3},{"id":301,"strength":2},{"id":303,"strength":1}]}
 };
 StableDriver.setStore(testSet);
+// StableDriver.setStore(dummyDb);
 StableDriver.runDeepStableMatch();
+
