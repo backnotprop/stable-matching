@@ -204,9 +204,9 @@ let StableMatching = (function () {
   function stablilityCheck() {
     let rejected = false;
     _.forIn(_DB, (person, key) => {
-	if(person.choices.length == 0) {
-            rejected = (rejected != false) ? rejected : person;
-	}
+      if(person.choices.length == 0) {
+        rejected = (rejected != false) ? rejected : person;
+      }
     });
 
     if(!rejected) {
@@ -340,7 +340,9 @@ let StableDriver = (function (StableMatching) {
   function _drive() {
     let results = _iterationLoop(_DATASTORE.initialState);
     _DATASTORE.finalMatches = results.matches;
+    _DATASTORE.finalExclude = results.excluded;
     _generateMatchReport( _DATASTORE.finalMatches);
+    _generateExcludedReport( _DATASTORE.finalExclude);
   }
 
   /**
@@ -363,16 +365,6 @@ let StableDriver = (function (StableMatching) {
     let stableMatching = false;
     
     while(!stableMatching) {
-      // console.log(`----STARTING NEW ITERATION #${iterationState.iterationCount} ----`);
-      // _.each(iterationState.matches, m => {
-      //   console.log(`${iterationState.iterationCount} MATCH: `+ m.id)
-      // })
-      // _.each(iterationState.rejects, r => {
-      //   console.log(`${iterationState.iterationCount} REJECT: `+ r.id)
-      // })
-      // // let preparedState = _prepAndConfirmState(interationState.currentState)
-      // console.log(JSON.stringify(iterationState.currentState))
-      // console.log(`----**********************----`);
       let iteration = _runIteration(iterationState.currentState);   
       if (iteration.failed) {
         // unstable
@@ -389,16 +381,18 @@ let StableDriver = (function (StableMatching) {
         });
         // check for remaining unmatched
         if(iterationState.rejects.length > 0) {
+          // generate a new state 
+          iterationState.currentState = _reduceState(_INITIALSTATE, iterationState.matches);
           // there needs to be a total rejection check now
           // if rejects do not prefer each other, then they will break the algorithim
-          if(possibiltyRemainCheck(iterationState.rejects)){
-            // there are matches, but rejects remain and need to be matched as well
-            iterationState.currentState = _reduceState(_INITIALSTATE, iterationState.matches);
+          iterationState.excluded = iterationState.excluded.concat(_rejectionCompleteness(iterationState.currentState));
+          if(iterationState.excluded.length + iterationState.matches != Object.keys(_INITIALSTATE).length){
+            // there are matches, possibly exclusions, but rejects remain and need to be matched as well
+            iterationState.currentState = _reduceState(_INITIALSTATE, iterationState.matches.concat(iterationState.excluded));
             iterationState.rejects.length = 0;
             iterationState.iterationCount++;
-          }
-          else {
-            // second optimal base case - there are matches, but some people were unable to be matched
+          } else {
+            // second optimal base case - there are matches, but also exlcusion
             stableMatching = true;
           }
         } else {
@@ -472,39 +466,29 @@ let StableDriver = (function (StableMatching) {
     });
   }
 
-  /**
-   * make's sure is preped properly before running through an iteration
+   /**
+   * generates report after successful stable matching
    */
-  function _prepAndConfirmState(state) {
-    // those going in need to remain in everyone else's preference lists
-    let totalRejects =  _totalRejectLookup(state);
-    if(totalRejects.length === 0){
-      return state;
-    } else {
-      // run reduce state without them
-      // return reduce state function
-    }
-
-    
+  function _generateExcludedReport(exlcuded) {
+    _.each(exlcuded, e => {
+      console.log("XXXXXXXXXXXXXXXXX")
+      console.log(e.id)
+    });
   }
 
   /**
    * looks for total rejects (those who no longer remain in anyones prefernence list)
    */ 
-  function _totalRejectLookup(state) {
-    let totalRejects = [];
+  function _rejectionCompleteness(state) {
+    let excludeList = [];
     _.forIn(state, (entity,key) => {
-      // check that choices remain
-      if(entity.choices.length === 0) {
-        // all choices have been removed and matched elsewhere 
-        totalRejects.push(entity);
-      } else {
-        // iterate over entities choices
-        _.forEach(entity.choices, c => {
-          // check tht
-        });
-      }
+      if(entity.choices.length == 0) {
+        // any entity who was in this list has already been matched
+        excludeList.push(entity);
+      } 
     });
+
+    return excludeList;
   }
 
   return {
