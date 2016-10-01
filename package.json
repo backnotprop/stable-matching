@@ -7,7 +7,6 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Michael Ramos",
-  "license": "ISC",
   "bugs": {
     "url": "https://github.com/mdramos/stable-matching/issues"
   },
