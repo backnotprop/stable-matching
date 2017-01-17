@@ -1,7 +1,6 @@
 {
   "name": "Stable-Matching",
   "version": "1.0.0",
-  "private": true,
   "devDependencies": {
     "node-sass": "^4.3.0",
     "react-scripts": "0.8.5",

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # See http://help.github.com/ignore-files/ for more about ignoring files.
 
 # dependencies
@@ -13,3 +14,10 @@ build
 .DS_Store
 .env
 npm-debug.log
+=======
+/node_modules/
+dummy_db.js
+dummyDB.js
+test.js
+.vscode
+>>>>>>> 5298c3245aaaa06ea1a1d31d2a3b84aa51300406
