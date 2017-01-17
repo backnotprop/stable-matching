@@ -1,0 +1,27 @@
+{
+  "name": "Stable-Matching",
+  "version": "1.0.0",
+  "private": true,
+  "devDependencies": {
+    "node-sass": "^4.3.0",
+    "react-scripts": "0.8.5",
+    "redux-logger": "^2.7.4"
+  },
+  "dependencies": {
+    "immutable": "^3.8.1",
+    "purecss": "^0.6.2",
+    "react": "^15.4.2",
+    "react-dom": "^15.4.2",
+    "redux": "^3.6.0",
+    "react-redux": "^4.4.5"
+  },
+  "scripts": {
+    "start": "npm run watch-css & react-scripts start",
+    "prod": "npm run build && NODE_ENV=production pushstate-server build",
+    "build": "npm run build-css && react-scripts build",
+    "build-css": "node-sass src/sass/base.scss src/styles/index.css",
+    "watch-css": "npm run build-css && node-sass src/sass/base.scss src/styles/index.css -w",
+    "test": "react-scripts test --env=jsdom",
+    "eject": "react-scripts eject"
+  }
+}

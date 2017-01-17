@@ -1,0 +1,52 @@
+@import url("https://fonts.googleapis.com/css?family=Monoton");
+@import url("https://fonts.googleapis.com/css?family=Overpass");
+body {
+  background: #fff;
+  font-family: 'Overpass', sans-serif !important;
+  /* fallback for old browsers */
+  /* Chrome 10-25, Safari 5.1-6 */ }
+
+p {
+  font-family: 'Overpass', sans-serif !important;
+  color: #4F5A65; }
+
+.App {
+  margin: 25px; }
+
+.App-header {
+  text-align: center; }
+
+.App-header h1 {
+  font-family: 'Monoton', cursive !important;
+  font-weight: 400 !important;
+  font-size: 2.25em;
+  color: cornflowerblue; }
+
+.App-section h2 {
+  color: cornflowerblue;
+  text-decoration: underline; }
+
+.Match-table {
+  font-family: sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow: auto;
+  border-collapse: separate;
+  border-spacing: 2px;
+  margin: 0 auto;
+  text-align: center; }
+  .Match-table th {
+    color: white;
+    font-weight: normal;
+    padding: 15px 25px;
+    text-align: center; }
+  .Match-table th:first-child {
+    background-color: goldenrod;
+    border: 2px solid #4F5A65; }
+  .Match-table th:not(:first-child) {
+    background-color: lightsteelblue; }
+  .Match-table td:first-child {
+    border: 2px solid #4F5A65; }
+  .Match-table td {
+    background-color: #eeeeee;
+    color: #6f6f6f;
+    padding: 15px 25px; }

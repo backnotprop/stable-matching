@@ -1,0 +1,38 @@
+.Match-table-container {
+    
+}
+
+.Match-table {
+  font-family: sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow: auto;
+  border-collapse: separate;
+  border-spacing: 2px;
+  margin: 0 auto;
+  text-align: center;
+
+  th {
+    color: white;
+    font-weight: normal;
+    padding: 15px 25px;
+    text-align: center;
+  }
+  th:first-child{
+    background-color: goldenrod;
+    border: 2px solid $secondary;
+  }
+
+  th:not(:first-child){
+    background-color: lightsteelblue;
+  }
+
+  td:first-child {
+    border: 2px solid $secondary;
+  }
+
+  td {
+    background-color: rgb(238, 238, 238);
+    color: rgb(111, 111, 111);
+    padding: 15px 25px;
+  }
+}
