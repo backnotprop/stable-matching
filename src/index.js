@@ -5,7 +5,6 @@ import App from './App';
 import { Provider } from 'react-redux';
 import configureStore from './store';
 
-import 'purecss/build/pure.css';
 import 'font-awesome/css/font-awesome.css';
 import './styles/index.css';
 

@@ -85,6 +85,9 @@ p {
 .icon-send-action {
   color: darkgoldenrod; }
 
+.icon-progress-action {
+  color: dodgerblue; }
+
 .icon-success-action {
   color: darkgreen; }
 
@@ -93,3 +96,6 @@ p {
 
 .icon-left-right {
   animation: pulse 1s infinite; }
+
+.no-bold {
+  font-weight: 400 !important; }

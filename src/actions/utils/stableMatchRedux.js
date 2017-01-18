@@ -72,7 +72,7 @@ class StableMatchRedux {
     this.__dispatch__  = (action) => {
       setTimeout(() => { 
         dispatch(action)
-      }, 250 * this.timleyTracker++);
+      }, 500 * this.timleyTracker++);
     }
 
   }

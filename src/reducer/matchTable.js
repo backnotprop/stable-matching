@@ -35,14 +35,24 @@ function prefsReducer(state,action, symm) {
                 }))
   }
   case RECEIVER_ACCEPT_PROPOSAL: {
-    let prefKey = state.findKey(p=>{return p.get('id')===action.receiver.get('id')});
-    return state
-            .set(prefKey, 
-                state.get(prefKey).withMutations(pref => {
-                  pref
-                    .set('isReceivingProposal',false)
-                    .set('hasAcceptedProposal',true)
-                }))
+    let prefKey = state.findKey(p=>{return p.get('id')===action[symm].get('id')});
+    if(symm === 'receiver'){
+      return state
+              .set(prefKey, 
+                  state.get(prefKey).withMutations(pref => {
+                    pref
+                      .set('isReceivingProposal',false)
+                      .set('hasAcceptedProposal',true)
+                  }))
+    } else {
+      return state
+              .set(prefKey, 
+                  state.get(prefKey).withMutations(pref => {
+                    pref
+                      .set('isAnAcceptedSender',true)
+                  }))
+    }
+    
   }
   case RECEIVER_REJECT_PROPOSAL: {
     let prefKey = state.findKey(p=>{return p.get('id')===action.receiver.get('id')});
@@ -59,8 +69,11 @@ function prefsReducer(state,action, symm) {
     let prefKey = state.findKey(p=>{return p.get('id')===action[symm].get('id')});
     return state
             .set(prefKey, 
-                state.get(prefKey)
-                  .set('isEliminated',true))
+                state.get(prefKey).withMutations(p => {
+                  p
+                   .set('isEliminated',true)
+                   .set('isAnAcceptedSender',false)
+                }))
   }
   default:
     return state      
@@ -81,15 +94,22 @@ function dataReducer(state,action) {
   }
   case RECEIVER_ACCEPT_PROPOSAL: {
     let stateSender = state.get(action.sender.get('id'));
-    return state
-            .set(action.sender.get('id'), 
+    let stateReceiver = state.get(action.receiver.get('id'));
+    return state.withMutations(s => {
+            s 
+              .set(action.sender.get('id'), 
                 stateSender.withMutations(sender => {
                   sender
                     .set('isSendingProposal',false)
                     .set('hasBeenAccepted',true)
-                    .set('prefs', prefsReducer(stateSender.get('prefs'), action))
+                    .set('prefs', prefsReducer(stateSender.get('prefs'), action, 'receiver'))
                 }))
+              .set(action.receiver.get('id'), 
+                stateReceiver
+                  .set('prefs', prefsReducer(stateReceiver.get('prefs'), action, 'sender')))
+    })
   }
+
   case RECEIVER_REJECT_PROPOSAL: {
     let stateSender = state.get(action.sender.get('id'));
     return state
