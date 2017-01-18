@@ -10,7 +10,7 @@
   border-spacing: 2px;
   margin: 0 auto;
   text-align: center;
-  font-size: .75em;
+  font-size: .8em;
 
   th {
     color: white;
@@ -36,6 +36,11 @@
     color: rgb(111, 111, 111);
     // padding: 25px 35px;
   }
+}
+
+.pref-eliminated {
+  color: darkred;
+  text-decoration: line-through;
 }
 
 .icon-contain {

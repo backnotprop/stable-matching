@@ -40,7 +40,9 @@ const TableCellEntity = ({entity}) => (
 
 const TableCellPref = ({data, pref}) => (
   <td>
-    <p>{data.get(pref.get('id')).get('name')}</p>
+    <p className={pref.get('isEliminated') ? 'pref-eliminated' : ''}>
+      {data.get(pref.get('id')).get('name')}
+    </p>
     
       {pref.get('isReceivingProposal') 
         ?

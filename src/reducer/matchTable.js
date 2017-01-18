@@ -6,7 +6,8 @@ import data from '../utils/data';
 import { 
   BEGIN_NEW_STAGE,
   SENDER_SENDS_PROPOSAL,
-  RECEIVER_ACCEPT_PROPOSAL, RECEIVER_REJECT_PROPOSAL
+  RECEIVER_ACCEPT_PROPOSAL, RECEIVER_REJECT_PROPOSAL,
+  ELIMINATE_SENDER_PREFERENCE
 } from '../actions/utils/stableMatchRedux';
 
 let sm = new StableMatch(data);
@@ -22,7 +23,7 @@ const initialState = fromJS({
   threeDemo: sm.data
 });
 
-function prefsReducer(state,action) {
+function prefsReducer(state,action, symm) {
   switch (action.type) {
   case SENDER_SENDS_PROPOSAL: {
     let prefKey = state.findKey(p=>{return p.get('id')===action.receiver.get('id')});
@@ -53,6 +54,13 @@ function prefsReducer(state,action) {
                     .set('hasAcceptedProposal',false)
                     .set('hasRejectedProposal',true)
                 }))
+  }
+  case ELIMINATE_SENDER_PREFERENCE: {
+    let prefKey = state.findKey(p=>{return p.get('id')===action[symm].get('id')});
+    return state
+            .set(prefKey, 
+                state.get(prefKey)
+                  .set('isEliminated',true))
   }
   default:
     return state      
@@ -93,6 +101,20 @@ function dataReducer(state,action) {
                     .set('prefs', prefsReducer(stateSender.get('prefs'), action))
                 }))
   }
+  case ELIMINATE_SENDER_PREFERENCE: {
+    let stateSender = state.get(action.sender.get('id'));
+    let stateReceiver = state.get(action.receiver.get('id'));
+    return state.withMutations(state => {
+            state 
+              .set(action.sender.get('id'), 
+                stateSender
+                  .set('prefs', prefsReducer(stateSender.get('prefs'), action, 'receiver')))
+              .set(action.receiver.get('id'), 
+                stateReceiver
+                  .set('prefs', prefsReducer(stateReceiver.get('prefs'), action, 'sender')))
+    })
+            
+  }
   default:
     return state      
   }
@@ -106,6 +128,7 @@ export default function reporter(state = initialState, action) {
   case SENDER_SENDS_PROPOSAL:
   case RECEIVER_ACCEPT_PROPOSAL:
   case RECEIVER_REJECT_PROPOSAL:
+  case ELIMINATE_SENDER_PREFERENCE:
     return state
              .set(action.demoType, 
               state.get(action.demoType)

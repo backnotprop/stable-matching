@@ -8,6 +8,7 @@ export const BEGIN_NEW_STAGE = 'BEGIN_NEW_STAGE';
 export const SENDER_SENDS_PROPOSAL = 'SENDER_SENDS_PROPOSAL';
 export const RECEIVER_ACCEPT_PROPOSAL = 'RECEIVER_ACCEPT_PROPOSAL';
 export const RECEIVER_REJECT_PROPOSAL = 'RECEIVER_REJECT_PROPOSAL';
+export const ELIMINATE_SENDER_PREFERENCE = 'ELIMINATE_SENDER_PREFERENCE';
 
 const GLOBALS = {
   dispatchBeginNewStage: function(demoType, stage) {
@@ -40,6 +41,14 @@ const GLOBALS = {
       sender: sender,
       receiver: receiver
     };
+  },
+  dispatchEliminateSenderPref: function(demoType, sender, receiver) {
+    return {
+      type: ELIMINATE_SENDER_PREFERENCE,
+      demoType: demoType,
+      sender: sender,
+      receiver: receiver
+    };
   }
 }
 
@@ -63,7 +72,7 @@ class StableMatchRedux {
     this.__dispatch__  = (action) => {
       setTimeout(() => { 
         dispatch(action)
-      }, 2000 * this.timleyTracker++);
+      }, 250 * this.timleyTracker++);
     }
 
   }
@@ -152,26 +161,15 @@ class StableMatchRedux {
       // need to compare against accept proposal
       if(receiver.get('acceptedReceivedRank') > senderRank) {
         // sender is rejected! because offer has already been accept by someone with higher preference
-
-        self.__dispatch__(GLOBALS.dispatchReceiverRejectProposal(self.__demoType__,sender,receiver));
-
         self._rejectOffer(sender, receiver);
       } else {
         // sender is accepted!
         // now the receiver needs to notify the previous acceptee that they are now regjects
         let rejected = self.parsedData.get(receiver.get('acceptedReceivedID'));
-
-        self.__dispatch__(GLOBALS.dispatchReceiverRejectProposal(self.__demoType__,rejected,receiver));
-
         self._rejectOffer(rejected, receiver);
-
-        self.__dispatch__(GLOBALS.dispatchReceiverAcceptProposal(self.__demoType__,sender,receiver));
-
         self._acceptOffer(sender, receiver, receiverRank, senderRank);   
       } 
     } else {
-      self.__dispatch__(GLOBALS.dispatchReceiverAcceptProposal(self.__demoType__,sender,receiver));
-
       // accepted because receiver does not have any accepted proposal yet
       self._acceptOffer(sender, receiver, receiverRank, senderRank);
     }
@@ -182,6 +180,9 @@ class StableMatchRedux {
    * will produce a new state
    */
   _acceptOffer(sender,receiver, receiverRank, senderRank) {
+
+    this.__dispatch__(GLOBALS.dispatchReceiverAcceptProposal(this.__demoType__,sender,receiver));
+
     this.parsedData = this.parsedData.withMutations(data => {
       data
         .set(sender.get('id'), 
@@ -207,6 +208,9 @@ class StableMatchRedux {
    * will produce a new state
    */
   _rejectOffer(sender,receiver) {
+
+    this.__dispatch__(GLOBALS.dispatchReceiverRejectProposal(this.__demoType__,sender,receiver));
+
     let updateSender = 
       sender.withMutations(s => {
         s
@@ -226,9 +230,7 @@ class StableMatchRedux {
    */
   eliminateStage() {
     let self = this;
-
     self.__dispatch__(GLOBALS.dispatchBeginNewStage(self.__demoType__, 'elimination'))
-
     this.parsedData.map((entity,i) => {
       let keepLast = entity.get('prefs').findKey(p => { return p.get('id') === entity.get('acceptedReceivedID')});
       let s = entity.get('prefs').size - 1;
@@ -241,7 +243,6 @@ class StableMatchRedux {
         // }
         self._eliminateSymmetrically(entity, self.parsedData.get(entity.getIn(['prefs',s.toString()]).get('id')))
         s--;
-        console.log(s)
       }
 
     });
@@ -343,6 +344,7 @@ class StableMatchRedux {
    * @access private
    */
   _eliminateSymmetrically(sender,receiver) {
+    this.__dispatch__(GLOBALS.dispatchEliminateSenderPref(this.__demoType__,sender,receiver));
     this.parsedData = this.parsedData.withMutations(data => {
       data
         .set(sender.get('id'), 
