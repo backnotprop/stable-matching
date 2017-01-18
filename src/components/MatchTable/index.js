@@ -24,11 +24,17 @@ const TableCellEntity = ({entity}) => (
             <Icon name="fa-envelope-o icon-send-action"/>{' '}
             <Icon name="fa-angle-double-right icon-send-action icon-left-right"/>
           </span>
-        :
-          <span className="icon-contain">
-            <Icon name="fa-envelope-o icon-no-action"/>{' '}
-            <Icon name="fa-angle-double-right icon-no-action"/>
-          </span>
+        : entity.get('hasBeenAccepted')
+          ?
+            <span className="icon-contain">
+              <Icon name="fa-envelope-o icon-success-action"/>{' '}
+              <Icon name="fa-angle-double-right icon-no-action"/>
+            </span>
+          :
+            <span className="icon-contain">
+              <Icon name="fa-envelope-o icon-no-action"/>{' '}
+              <Icon name="fa-angle-double-right icon-no-action"/>
+            </span>
       }
     </span>
   </td>
@@ -44,11 +50,17 @@ const TableCellPref = ({data, pref}) => (
             <Icon name="fa-angle-double-down icon-send-action icon-left-right"/><br/>
             <Icon name="fa-envelope-o icon-send-action"/>{' '}
           </span>
-        :
-          <span className="icon-contain">
-            <Icon name="fa-angle-double-down icon-no-action"/><br/>
-            <Icon name="fa-envelope-o icon-no-action"/>{' '}
-          </span>
+        : pref.get('hasAcceptedProposal') 
+          ?
+            <span className="icon-contain">
+              <Icon name="fa-angle-double-down icon-no-action"/><br/>
+              <Icon name="fa-envelope-o icon-success-action"/>{' '}
+            </span>
+          :
+            <span className="icon-contain">
+              <Icon name="fa-angle-double-down icon-no-action"/><br/>
+              <Icon name="fa-envelope-o icon-no-action"/>{' '}
+            </span>
       }
     
     

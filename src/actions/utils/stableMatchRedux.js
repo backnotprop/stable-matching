@@ -5,7 +5,8 @@ import Immutable, {fromJS} from 'immutable';
  * REDUX SETUP
  */
 export const BEGIN_NEW_STAGE = 'BEGIN_NEW_STAGE';
-export const SENDER_SENDS_PROPOSAL = 'SENDER_SENDS_PROPOSAL'
+export const SENDER_SENDS_PROPOSAL = 'SENDER_SENDS_PROPOSAL';
+export const RECEIVER_ACCEPT_PROPOSAL = 'RECEIVER_ACCEPT_PROPOSAL';
 
 const GLOBALS = {
   dispatchBeginNewStage: function(demoType, stage) {
@@ -18,6 +19,14 @@ const GLOBALS = {
   dispatchSenderSendProposal: function(demoType, sender, receiver) {
     return {
       type: SENDER_SENDS_PROPOSAL,
+      demoType: demoType,
+      sender: sender,
+      receiver: receiver
+    };
+  },
+  dispatchReceiverAcceptProposal: function(demoType, sender, receiver) {
+    return {
+      type: RECEIVER_ACCEPT_PROPOSAL,
       demoType: demoType,
       sender: sender,
       receiver: receiver
@@ -101,7 +110,7 @@ class StableMatchRedux {
               .get('id')
             );
 
-        self.__dispatch__(GLOBALS.dispatchSenderSendProposal(self.__demoType__,newSender, receiver));
+        self.__dispatch__(GLOBALS.dispatchSenderSendProposal(self.__demoType__,newSender,receiver));
 
         // init proposal process for sender and receiver
         self._proposalProcess( 
@@ -140,9 +149,14 @@ class StableMatchRedux {
         // now the receiver needs to notify the previous acceptee that they are now regjects
         let rejected = self.parsedData.get(receiver.get('acceptedReceivedID'));
         self._rejectOffer(rejected, receiver);
+
+        self.__dispatch__(GLOBALS.dispatchReceiverAcceptProposal(self.__demoType__,sender,receiver));
+
         self._acceptOffer(sender, receiver, receiverRank, senderRank);   
       } 
     } else {
+      self.__dispatch__(GLOBALS.dispatchReceiverAcceptProposal(self.__demoType__,sender,receiver));
+
       // accepted because receiver does not have any accepted proposal yet
       self._acceptOffer(sender, receiver, receiverRank, senderRank);
     }
