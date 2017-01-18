@@ -12,14 +12,12 @@ class App extends Component {
 
     return (
       <div className="App App-gradient">
-        <header className="pure-g App-header">
-          <div className="pure-u-1-3"></div>
-          <div className="pure-u-1-3 App-title"><h1>Stable Matching</h1><p><em>the stable roomate problem</em></p></div>
-          <div className="pure-u-1-3"></div>
+        <header className="App-header">
+          <div className="App-title"><h1>Stable Matching</h1><p><em>the stable roomate problem</em></p></div>
         </header>
 
         <section className="App-section App-section-fulldemo">
-          <h2>Full Demo</h2>
+          <h2>Full Demo:</h2>
 
             <FullDemo {...this.props} />
          

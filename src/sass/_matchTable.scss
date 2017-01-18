@@ -10,11 +10,12 @@
   border-spacing: 2px;
   margin: 0 auto;
   text-align: center;
+  font-size: .75em;
 
   th {
     color: white;
     font-weight: normal;
-    padding: 25px 35px;
+    padding: 20px 30px;
     text-align: center;
   }
   th:first-child{
@@ -38,12 +39,13 @@
 }
 
 .icon-contain {
-  padding: 5px;
+  padding: 3px;
   float: right;
 }
 
 .icon-action{
   display: inline-block;
+  font-weight: bold;
 }
 
 .icon-no-action {

@@ -14,6 +14,10 @@ body {
   /* fallback for old browsers */
   /* Chrome 10-25, Safari 5.1-6 */ }
 
+section {
+  width: 80vw;
+  margin: 0 auto; }
+
 p {
   font-family: 'Overpass', sans-serif !important;
   color: #4F5A65; }
@@ -44,11 +48,12 @@ p {
   border-collapse: separate;
   border-spacing: 2px;
   margin: 0 auto;
-  text-align: center; }
+  text-align: center;
+  font-size: .75em; }
   .Match-table th {
     color: white;
     font-weight: normal;
-    padding: 25px 35px;
+    padding: 20px 30px;
     text-align: center; }
   .Match-table th:first-child {
     background-color: goldenrod;
@@ -62,11 +67,12 @@ p {
     color: #6f6f6f; }
 
 .icon-contain {
-  padding: 5px;
+  padding: 3px;
   float: right; }
 
 .icon-action {
-  display: inline-block; }
+  display: inline-block;
+  font-weight: bold; }
 
 .icon-no-action {
   color: lightgray; }
