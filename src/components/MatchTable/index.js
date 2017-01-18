@@ -37,13 +37,39 @@ const TableCellEntity = ({entity}) => (
       }
   </td>
 );
+// 
+
+// const IconBoxMatchInfo = (rejected, matched) => {
+//   let box;
+//   if(rejected) {
+//     box = (
+      
+//     );
+//   } else if (matched) {
+//     box = ()
+//   } else {
+//     box = ()
+//   }
+
+//   return (box)
+// }
 
 const TableCellPref = ({data, pref}) => (
   <td>
-    <p className={pref.get('isEliminated') ? 'pref-eliminated' : ''}>
+    <p>
       {data.get(pref.get('id')).get('name')}
     </p>
-    
+
+      <span className="icon-contain">
+        <br/>
+        <Icon name={`fa-flag-checkered  ${pref.get('hasMatched') ? "icon-success-action" : "icon-no-action"}`}/>
+      </span>
+
+       <span className="icon-contain">
+        <br/>
+        <Icon name={`fa-window-close-o  ${pref.get('isEliminated') ? "icon-failure-action" : "icon-no-action"}`}/>
+      </span>
+
       {pref.get('isReceivingProposal') 
         ?
           <span className="icon-contain">
@@ -68,6 +94,12 @@ const TableCellPref = ({data, pref}) => (
                 <Icon name="fa-envelope-o icon-no-action"/>
               </span>
       }
+
+      
+
+      
+
+
     
     
      </td>
