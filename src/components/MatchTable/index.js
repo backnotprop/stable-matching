@@ -1,5 +1,7 @@
 import React, { Component, PropTypes } from 'react';
 
+const Icon = ({name}) => (<i className={`fa icon-action ${name} fa-lg`} aria-hidden="true"></i>)
+
 const TableHeader = ({data}) => (
   <thead>
     <tr>
@@ -11,7 +13,25 @@ const TableHeader = ({data}) => (
 );
 
 const TableCellEntity = ({entity}) => (
-  <td>{entity.get('name')}</td>
+  <td>
+    <p>
+      {entity.get('name')}
+    </p>
+    <span>
+      {entity.get('isSendingProposal') 
+        ?
+          <span>
+            <Icon name="fa-angle-double-right icon-send-action"/>
+            <Icon name="fa-envelope-o icon-send-action"/>{' '}
+          </span>
+        :
+          <span>
+            <Icon name="fa-angle-double-right icon-no-action"/>
+            <Icon name="fa-envelope-o icon-no-action"/>{' '}
+          </span>
+      }
+    </span>
+  </td>
 );
 
 const TableCellPref = ({data, pref}) => (
@@ -32,12 +52,15 @@ const TableBody = ({data}) => (
 );
 
 class MatchTable extends Component {
+  componentDidMount() {
+    this.props.runFullDemo(this.props.fullDemo.get('data'));
+  }
+
   render() {
-
-    let data = this.props.demoType === 'full'
-      ? this.props.fullDemoData
+    let data = this.props.demoType === 'fullDemo'
+      ? this.props.fullDemo.get('data')
       : {};
-
+   
     return (
       <table className="Match-table">
         <TableHeader data={data} />

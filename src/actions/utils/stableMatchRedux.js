@@ -1,13 +1,53 @@
 'use strict';
 import Immutable, {fromJS} from 'immutable';
 
-class StableMatch {
-  constructor(intial = null, preParsed = null, dispatch = null) {
+/**
+ * REDUX SETUP
+ */
+export const BEGIN_NEW_STAGE = 'BEGIN_NEW_STAGE';
+export const SENDER_SENDS_PROPOSAL = 'SENDER_SENDS_PROPOSAL'
+
+const GLOBALS = {
+  dispatchBeginNewStage: function(demoType, stage) {
+    return {
+      type: BEGIN_NEW_STAGE,
+      demoType: demoType,
+      stage: stage
+    };
+  },
+  dispatchSenderSendProposal: function(demoType, sender, receiver) {
+    return {
+      type: SENDER_SENDS_PROPOSAL,
+      demoType: demoType,
+      sender: sender,
+      reciever: receiver
+    };
+  }
+}
+
+
+/********/
+
+
+
+/**
+ * Stable Matched configured for redux
+ */
+class StableMatchRedux {
+  constructor(intial = null, preParsed = null, dispatch = null, demoType = 'full') {
     this.intialData = fromJS(intial);
     this.parsedData = preParsed;
-    this.dispatch   = dispatch;
+    
 
-    console.log(dispatch)
+    this.__demoType__  = demoType;
+    this.timleyTracker = 0;
+    // setups up human-viewable action
+    this.__dispatch__  = (action) => {
+      setTimeout(() => { 
+        dispatch(action)
+      }, 2000 * this.timleyTracker++);
+    }
+
   }
 
   get data() {
@@ -37,6 +77,8 @@ class StableMatch {
     let self = this;
     let allProposed = false;
 
+    self.__dispatch__(GLOBALS.dispatchBeginNewStage(self.__demoType__, 'proposal'))
+
     while(!allProposed) {
       let key = self.parsedData.findKey(e=> {return e.get('hasAcceptedSentProposal') === false;});
       let newSender = self.parsedData.get(key)
@@ -58,6 +100,8 @@ class StableMatch {
               .get('0')
               .get('id')
             );
+
+        self.__dispatch__(GLOBALS.dispatchSenderSendProposal(self.__demoType__,newSender, receiver));
 
         // init proposal process for sender and receiver
         self._proposalProcess( 
@@ -153,6 +197,9 @@ class StableMatch {
    */
   eliminateStage() {
     let self = this;
+
+    self.__dispatch__(GLOBALS.dispatchBeginNewStage(self.__demoType__, 'elimination'))
+
     this.parsedData.map((entity,i) => {
       let keepLast = entity.get('prefs').findKey(p => { return p.get('id') === entity.get('acceptedReceivedID')});
       if(!keepLast) {
@@ -287,4 +334,4 @@ class StableMatch {
 
 
 
-export default StableMatch;
+export default StableMatchRedux;

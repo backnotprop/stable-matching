@@ -2,11 +2,12 @@ import { createStore, applyMiddleware, compose } from 'redux';
 
 import createLogger from 'redux-logger';
 import rootReducer from './reducer/';
+import thunk from 'redux-thunk';
 
 const middlewareBuilder = () => {
 
   let middleware = {};
-  let universalMiddleware = [ ];
+  let universalMiddleware = [ thunk ];
   let allComposeElements = [];
   
   if(process.browser){

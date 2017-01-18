@@ -14,7 +14,7 @@
   th {
     color: white;
     font-weight: normal;
-    padding: 15px 25px;
+    padding: 25px 35px;
     text-align: center;
   }
   th:first-child{
@@ -33,6 +33,20 @@
   td {
     background-color: rgb(238, 238, 238);
     color: rgb(111, 111, 111);
-    padding: 15px 25px;
+    // padding: 25px 35px;
   }
+}
+
+.icon-action{
+  float: right;
+  display: inline-block;
+  padding: 5px;
+}
+
+.icon-no-action {
+  color: lightgray;
+}
+
+.icon-send-action {
+  color: darkgoldenrod;
 }

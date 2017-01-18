@@ -26,6 +26,9 @@ p {
   color: cornflowerblue;
   text-decoration: underline; }
 
+.Full-Demo {
+  text-align: center; }
+
 .Match-table {
   font-family: sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -37,7 +40,7 @@ p {
   .Match-table th {
     color: white;
     font-weight: normal;
-    padding: 15px 25px;
+    padding: 25px 35px;
     text-align: center; }
   .Match-table th:first-child {
     background-color: goldenrod;
@@ -48,5 +51,15 @@ p {
     border: 2px solid #4F5A65; }
   .Match-table td {
     background-color: #eeeeee;
-    color: #6f6f6f;
-    padding: 15px 25px; }
+    color: #6f6f6f; }
+
+.icon-action {
+  float: right;
+  display: inline-block;
+  padding: 5px; }
+
+.icon-no-action {
+  color: lightgray; }
+
+.icon-send-action {
+  color: darkgoldenrod; }

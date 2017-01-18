@@ -4,21 +4,11 @@ import { bindActionCreators } from 'redux';
 
 import * as  AppActions from './actions/app';
 
-import MatchTable from './components/MatchTable/';
+import FullDemo from './components/Demos/Full';
 
-import StableMatch from './utils/stableMatch';
 
 class App extends Component {
   render() {
-
-    let {
-      fullDemoData
-    } = this.props;
-
-    let sm = new StableMatch(null,fullDemoData);
-    sm.proposalStage();
-    sm.eliminateStage();
-    console.log(sm.data)
 
     return (
       <div className="App App-gradient">
@@ -30,8 +20,8 @@ class App extends Component {
 
         <section className="App-section App-section-fulldemo">
           <h2>Full Demo</h2>
-      
-           <MatchTable demoType="full" {...this.props} />
+
+            <FullDemo {...this.props} />
          
         </section>
 
@@ -46,10 +36,10 @@ function mapStateToProps(state) {
   } = state;
   
   const 
-    fullDemoData = matchTable.get('fullDemo');
+    fullDemo = matchTable.get('fullDemo');
 
   return {
-    fullDemoData
+    fullDemo
   };
 }
 
