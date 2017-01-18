@@ -7,6 +7,7 @@ import Immutable, {fromJS} from 'immutable';
 export const BEGIN_NEW_STAGE = 'BEGIN_NEW_STAGE';
 export const SENDER_SENDS_PROPOSAL = 'SENDER_SENDS_PROPOSAL';
 export const RECEIVER_ACCEPT_PROPOSAL = 'RECEIVER_ACCEPT_PROPOSAL';
+export const RECEIVER_REJECT_PROPOSAL = 'RECEIVER_REJECT_PROPOSAL';
 
 const GLOBALS = {
   dispatchBeginNewStage: function(demoType, stage) {
@@ -27,6 +28,14 @@ const GLOBALS = {
   dispatchReceiverAcceptProposal: function(demoType, sender, receiver) {
     return {
       type: RECEIVER_ACCEPT_PROPOSAL,
+      demoType: demoType,
+      sender: sender,
+      receiver: receiver
+    };
+  },
+  dispatchReceiverRejectProposal: function(demoType, sender, receiver) {
+    return {
+      type: RECEIVER_REJECT_PROPOSAL,
       demoType: demoType,
       sender: sender,
       receiver: receiver
@@ -143,11 +152,17 @@ class StableMatchRedux {
       // need to compare against accept proposal
       if(receiver.get('acceptedReceivedRank') > senderRank) {
         // sender is rejected! because offer has already been accept by someone with higher preference
+
+        self.__dispatch__(GLOBALS.dispatchReceiverRejectProposal(self.__demoType__,sender,receiver));
+
         self._rejectOffer(sender, receiver);
       } else {
         // sender is accepted!
         // now the receiver needs to notify the previous acceptee that they are now regjects
         let rejected = self.parsedData.get(receiver.get('acceptedReceivedID'));
+
+        self.__dispatch__(GLOBALS.dispatchReceiverRejectProposal(self.__demoType__,rejected,receiver));
+
         self._rejectOffer(rejected, receiver);
 
         self.__dispatch__(GLOBALS.dispatchReceiverAcceptProposal(self.__demoType__,sender,receiver));

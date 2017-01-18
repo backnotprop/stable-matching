@@ -56,11 +56,17 @@ const TableCellPref = ({data, pref}) => (
               <Icon name="fa-angle-double-down icon-no-action"/><br/>
               <Icon name="fa-envelope-o icon-success-action"/>{' '}
             </span>
-          :
-            <span className="icon-contain">
-              <Icon name="fa-angle-double-down icon-no-action"/><br/>
-              <Icon name="fa-envelope-o icon-no-action"/>{' '}
-            </span>
+          : pref.get('hasRejectedProposal')
+            ?
+              <span className="icon-contain">
+                <Icon name="fa-angle-double-down icon-no-action"/><br/>
+                <Icon name="fa-envelope-o icon-failure-action"/>{' '}
+              </span>
+            :
+              <span className="icon-contain">
+                <Icon name="fa-angle-double-down icon-no-action"/><br/>
+                <Icon name="fa-envelope-o icon-no-action"/>{' '}
+              </span>
       }
     
     

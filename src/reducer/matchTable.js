@@ -6,7 +6,7 @@ import data from '../utils/data';
 import { 
   BEGIN_NEW_STAGE,
   SENDER_SENDS_PROPOSAL,
-  RECEIVER_ACCEPT_PROPOSAL
+  RECEIVER_ACCEPT_PROPOSAL, RECEIVER_REJECT_PROPOSAL
 } from '../actions/utils/stableMatchRedux';
 
 let sm = new StableMatch(data);
@@ -43,6 +43,17 @@ function prefsReducer(state,action) {
                     .set('hasAcceptedProposal',true)
                 }))
   }
+  case RECEIVER_REJECT_PROPOSAL: {
+    let prefKey = state.findKey(p=>{return p.get('id')===action.receiver.get('id')});
+    return state
+            .set(prefKey, 
+                state.get(prefKey).withMutations(pref => {
+                  pref
+                    .set('isReceivingProposal',false)
+                    .set('hasAcceptedProposal',false)
+                    .set('hasRejectedProposal',true)
+                }))
+  }
   default:
     return state      
   }
@@ -71,6 +82,17 @@ function dataReducer(state,action) {
                     .set('prefs', prefsReducer(stateSender.get('prefs'), action))
                 }))
   }
+  case RECEIVER_REJECT_PROPOSAL: {
+    let stateSender = state.get(action.sender.get('id'));
+    return state
+            .set(action.sender.get('id'), 
+                stateSender.withMutations(sender => {
+                  sender
+                    .set('isSendingProposal',false)
+                    .set('hasBeenAccepted',false)
+                    .set('prefs', prefsReducer(stateSender.get('prefs'), action))
+                }))
+  }
   default:
     return state      
   }
@@ -83,6 +105,7 @@ export default function reporter(state = initialState, action) {
               .set(action.demoType, state.get(action.demoType).set('currentStage', action.stage))
   case SENDER_SENDS_PROPOSAL:
   case RECEIVER_ACCEPT_PROPOSAL:
+  case RECEIVER_REJECT_PROPOSAL:
     return state
              .set(action.demoType, 
               state.get(action.demoType)

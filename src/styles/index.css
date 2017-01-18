@@ -77,5 +77,8 @@ p {
 .icon-success-action {
   color: darkgreen; }
 
+.icon-failure-action {
+  color: darkred; }
+
 .icon-left-right {
   animation: pulse 1s infinite; }
