@@ -20,7 +20,7 @@ const GLOBALS = {
       type: SENDER_SENDS_PROPOSAL,
       demoType: demoType,
       sender: sender,
-      reciever: receiver
+      receiver: receiver
     };
   }
 }
@@ -202,12 +202,7 @@ class StableMatchRedux {
 
     this.parsedData.map((entity,i) => {
       let keepLast = entity.get('prefs').findKey(p => { return p.get('id') === entity.get('acceptedReceivedID')});
-      if(!keepLast) {
-        console.log(entity)
-        console.log(entity.get('prefs'))
-      }
       let s = entity.get('prefs').size - 1;
-      console.log(keepLast, s)
       while(s != keepLast) {
         // stability check before hand
         // let stability = stablilityCheck();

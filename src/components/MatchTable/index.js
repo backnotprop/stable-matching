@@ -20,14 +20,14 @@ const TableCellEntity = ({entity}) => (
     <span>
       {entity.get('isSendingProposal') 
         ?
-          <span>
-            <Icon name="fa-angle-double-right icon-send-action"/>
+          <span className="icon-contain">
             <Icon name="fa-envelope-o icon-send-action"/>{' '}
+            <Icon name="fa-angle-double-right icon-send-action icon-left-right"/>
           </span>
         :
-          <span>
-            <Icon name="fa-angle-double-right icon-no-action"/>
+          <span className="icon-contain">
             <Icon name="fa-envelope-o icon-no-action"/>{' '}
+            <Icon name="fa-angle-double-right icon-no-action"/>
           </span>
       }
     </span>
@@ -35,7 +35,24 @@ const TableCellEntity = ({entity}) => (
 );
 
 const TableCellPref = ({data, pref}) => (
-  <td>{data.get(pref.get('id').toString()).get('name')} </td>
+  <td>
+    <p>{data.get(pref.get('id')).get('name')}</p>
+    
+      {pref.get('isReceivingProposal') 
+        ?
+          <span className="icon-contain">
+            <Icon name="fa-angle-double-down icon-send-action icon-left-right"/><br/>
+            <Icon name="fa-envelope-o icon-send-action"/>{' '}
+          </span>
+        :
+          <span className="icon-contain">
+            <Icon name="fa-angle-double-down icon-no-action"/><br/>
+            <Icon name="fa-envelope-o icon-no-action"/>{' '}
+          </span>
+      }
+    
+    
+     </td>
 );
 
 const TableBody = ({data}) => (

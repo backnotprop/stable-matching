@@ -37,10 +37,13 @@
   }
 }
 
-.icon-action{
-  float: right;
-  display: inline-block;
+.icon-contain {
   padding: 5px;
+  float: right;
+}
+
+.icon-action{
+  display: inline-block;
 }
 
 .icon-no-action {
@@ -49,4 +52,8 @@
 
 .icon-send-action {
   color: darkgoldenrod;
+}
+
+.icon-left-right {
+  animation: pulse 1s infinite;
 }
