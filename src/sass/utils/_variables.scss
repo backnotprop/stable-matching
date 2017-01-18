@@ -18,3 +18,15 @@ $secondary: #4F5A65;
     opacity: .45;
   }
 }
+
+@-webkit-keyframes pulse {
+  50% {
+    opacity: .45;
+  }
+}
+
+@-moz-keyframes pulse {
+  50% {
+    opacity: .45;
+  }
+}

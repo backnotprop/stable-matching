@@ -40,16 +40,16 @@ const TableCellPref = ({data, pref}) => (
 
       <span className="icon-contain">
         <br/>
-        <Icon name={`fa-flag-checkered  ${pref.get('hasMatched') ? "icon-success-action" : "icon-no-action"}`}/>
-      </span>
-      <span className="icon-contain">
-        <br/>
-        <Icon name={`fa-level-down  no-bold  ${pref.get('isAnAcceptedSender') ? "icon-progress-action" : "icon-no-action"}`}/>
+        <Icon name={`fa-flag-checkered no-bold  ${pref.get('hasMatched') ? "icon-success-action" : "icon-no-action"}`}/>
       </span>
        <span className="icon-contain">
         <br/>
         <Icon name={`fa-window-close-o no-bold  ${pref.get('isEliminated') ? "icon-failure-action" : "icon-no-action"}`}/>
       </span> 
+       <span className="icon-contain">
+        <br/>
+        <Icon name={`fa-level-down  no-bold  ${pref.get('isAnAcceptedSender') ? "icon-progress-action" : "icon-no-action"}`}/>
+      </span>
 
       {pref.get('isReceivingProposal') 
         ?

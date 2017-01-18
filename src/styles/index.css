@@ -8,6 +8,14 @@
   50% {
     opacity: .45; } }
 
+@-webkit-keyframes pulse {
+  50% {
+    opacity: .45; } }
+
+@-moz-keyframes pulse {
+  50% {
+    opacity: .45; } }
+
 body {
   background: #fff;
   font-family: 'Overpass', sans-serif !important;
@@ -89,7 +97,8 @@ p {
   color: dodgerblue; }
 
 .icon-success-action {
-  color: darkgreen; }
+  color: darkgreen;
+  animation: pulse 1s 2; }
 
 .icon-failure-action {
   color: darkred; }

@@ -13,6 +13,7 @@ export function runFullDemo(data) {
     smx.proposalStage();
     smx.eliminateStage();
     smx.cycleReduceStage();
+    smx.presentFinalMatches();
 
     // let sm = new StableMatch(null,fullDemoData);
     // 

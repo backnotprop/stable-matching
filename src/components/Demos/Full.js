@@ -17,7 +17,7 @@ class FullDemo extends Component {
       <div className="Full-Demo">
         
         <MatchTable demoType="fullDemo" {...this.props} />
-        <h4>{`${currentStage} stage`}</h4>
+        <h4>{currentStage == 'complete' ? 'COMPLETE!' : `${currentStage} stage`}</h4>
       </div>
     );
   }

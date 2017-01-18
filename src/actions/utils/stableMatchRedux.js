@@ -9,6 +9,7 @@ export const SENDER_SENDS_PROPOSAL = 'SENDER_SENDS_PROPOSAL';
 export const RECEIVER_ACCEPT_PROPOSAL = 'RECEIVER_ACCEPT_PROPOSAL';
 export const RECEIVER_REJECT_PROPOSAL = 'RECEIVER_REJECT_PROPOSAL';
 export const ELIMINATE_SENDER_PREFERENCE = 'ELIMINATE_SENDER_PREFERENCE';
+export const CREATE_FINAL_MATCHING = 'CREATE_FINAL_MATCHING';
 
 const GLOBALS = {
   dispatchBeginNewStage: function(demoType, stage) {
@@ -49,13 +50,18 @@ const GLOBALS = {
       sender: sender,
       receiver: receiver
     };
+  },
+  dispatchCreateFinalMatching: function(demoType, sender, receiver) {
+    return {
+      type: CREATE_FINAL_MATCHING,
+      demoType: demoType,
+      sender: sender,
+      receiver: receiver
+    };
   }
 }
 
-
 /********/
-
-
 
 /**
  * Stable Matched configured for redux
@@ -72,7 +78,7 @@ class StableMatchRedux {
     this.__dispatch__  = (action) => {
       setTimeout(() => { 
         dispatch(action)
-      }, 250 * this.timleyTracker++);
+      }, 1000 * this.timleyTracker++);
     }
 
   }
@@ -328,19 +334,19 @@ class StableMatchRedux {
   _eliminateDiagnals(pairs) {
     let self = this;
     // start at second element for diagnal rejection
-    console.log("======------------->>>>")
     pairs.map((p,i) => {
       if(i < pairs.size - 1) {
-        console.log("DELETING:: ", p.get(1).get('id'),pairs.get(i+1).get(0).get('id'))
         self._eliminateSymmetrically(p.get(1),pairs.get(i+1).get(0))
-      } else {
-        console.log("<<<--------==========")
-        console.log(p)
       }
     })
   }
 
-
+  presentFinalMatches(){
+    this.parsedData.map(entity => {
+      this.__dispatch__(GLOBALS.dispatchCreateFinalMatching(this.__demoType__,entity,this.parsedData.get(entity.get('prefs').get(0).get('id'))));
+    })
+    this.__dispatch__(GLOBALS.dispatchBeginNewStage(this.__demoType__, 'complete'))
+  }
 
   /**
    * Eliminates two people from each others preference list

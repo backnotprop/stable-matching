@@ -7,7 +7,8 @@ import {
   BEGIN_NEW_STAGE,
   SENDER_SENDS_PROPOSAL,
   RECEIVER_ACCEPT_PROPOSAL, RECEIVER_REJECT_PROPOSAL,
-  ELIMINATE_SENDER_PREFERENCE
+  ELIMINATE_SENDER_PREFERENCE,
+  CREATE_FINAL_MATCHING
 } from '../actions/utils/stableMatchRedux';
 
 let sm = new StableMatch(data);
@@ -75,6 +76,12 @@ function prefsReducer(state,action, symm) {
                    .set('isAnAcceptedSender',false)
                 }))
   }
+  case CREATE_FINAL_MATCHING: {
+    let prefKey = state.findKey(p=>{return p.get('id')===action[symm].get('id')});
+    return state
+            .set(prefKey, 
+                state.get(prefKey).set('hasMatched',true))
+  }
   default:
     return state      
   }
@@ -124,16 +131,29 @@ function dataReducer(state,action) {
   case ELIMINATE_SENDER_PREFERENCE: {
     let stateSender = state.get(action.sender.get('id'));
     let stateReceiver = state.get(action.receiver.get('id'));
-    return state.withMutations(state => {
-            state 
+    return state.withMutations(s => {
+            s 
               .set(action.sender.get('id'), 
                 stateSender
                   .set('prefs', prefsReducer(stateSender.get('prefs'), action, 'receiver')))
               .set(action.receiver.get('id'), 
                 stateReceiver
                   .set('prefs', prefsReducer(stateReceiver.get('prefs'), action, 'sender')))
-    })
-            
+    })      
+  }
+  case CREATE_FINAL_MATCHING: {
+    console.log(action)
+    let stateSender = state.get(action.sender.get('id'));
+    let stateReceiver = state.get(action.receiver.get('id'));
+    return state.withMutations(s => {
+            s 
+              .set(action.sender.get('id'), 
+                stateSender
+                  .set('prefs', prefsReducer(stateSender.get('prefs'), action, 'receiver')))
+              .set(action.receiver.get('id'), 
+                stateReceiver
+                  .set('prefs', prefsReducer(stateReceiver.get('prefs'), action, 'sender')))
+    })   
   }
   default:
     return state      
@@ -149,6 +169,7 @@ export default function reporter(state = initialState, action) {
   case RECEIVER_ACCEPT_PROPOSAL:
   case RECEIVER_REJECT_PROPOSAL:
   case ELIMINATE_SENDER_PREFERENCE:
+  case CREATE_FINAL_MATCHING:
     return state
              .set(action.demoType, 
               state.get(action.demoType)
