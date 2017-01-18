@@ -1,5 +1,5 @@
 'use strict';
-import Immutable, {fromJS} from 'immutable';
+import Immutable, {List, fromJS} from 'immutable';
 
 /**
  * REDUX SETUP
@@ -72,7 +72,7 @@ class StableMatchRedux {
     this.__dispatch__  = (action) => {
       setTimeout(() => { 
         dispatch(action)
-      }, 500 * this.timleyTracker++);
+      }, 250 * this.timleyTracker++);
     }
 
   }
@@ -230,7 +230,9 @@ class StableMatchRedux {
    */
   eliminateStage() {
     let self = this;
+    
     self.__dispatch__(GLOBALS.dispatchBeginNewStage(self.__demoType__, 'elimination'))
+    
     this.parsedData.map((entity,i) => {
       let keepLast = entity.get('prefs').findKey(p => { return p.get('id') === entity.get('acceptedReceivedID')});
       let s = entity.get('prefs').size - 1;
@@ -248,92 +250,95 @@ class StableMatchRedux {
     });
   }
 
-  // /**
-  //  * Cyclic Elimination Stage 3
-  //  * - description needed
-  //  */
-  // cycleReduceStage() {
-  //   let allMatched = false;
-  //   // all or nothing phase 
-  //   while(!allMatched) {
-  //     // there is a start if any one person has more than 1 preference remaining
-  //     let start = indexWithMultipleRemain();
+  /**
+   * Cyclic Elimination Stage 3
+   * - description needed
+   */
+  cycleReduceStage() {
+    let self = this;
 
-  //     if(start) {
-  //       let p = _DB[start] // starting person
-  //       let q = _DB[ p.choices[1].id ]; // their second preference
+    self.__dispatch__(GLOBALS.dispatchBeginNewStage(self.__demoType__, 'cycle-reduce'))
+
+    let allMatched = false;
+    // all or nothing phase 
+    while(!allMatched) {
+      // there is an entityUnreduced if any one person has more than 1 preference remaining
+      let entityUnreduced = self.parsedData.find(entity=>{return entity.get('prefs').size !== 1})
+      console.log(self.parsedData.toJS())
+      if(entityUnreduced) {
+        let p = entityUnreduced // starting person
+        let q = self.parsedData.get(entityUnreduced.get('prefs').get(1).get('id')) // their second preference
        
-  //       let currentPair = [p,q];
-  //       let cyclePairs = [currentPair]; // first pair in cycle
-  // 	    // cyclic reduction
-  //       let cycle = false;
-  //       while(!cycle) {
-  //         // need to check stability at this point
-  //         let stability = stablilityCheck();
-  //         if(!stability.stable) {
-  //           throw new StabilityException(stability);
-  //         }
+        let currentPair = List([p,q]);
+        let cyclePairs = List([currentPair]); // first pair in cycle
+  	    // cyclic reduction
+        let cycle = false;
+        while(!cycle) {
+          // need to check stability at this point
+          // let stability = stablilityCheck();
+          // if(!stability.stable) {
+          //   throw new StabilityException(stability);
+          // }
+	        // redefine p and q during the iterative process
+          p = self.parsedData.get(q.get('prefs').last().get('id')); // grab the last preference of previous q
+          q = self.parsedData.get(p.get('prefs').get(1).get('id')) // q now equals new p's second preference
+          
+          // if(_.isUndefined(p.choices[1]) || p.choices.length == 0){
+          //   q = _DB[ p.choices[0].id ];
+          // } else {
+          //   q = _DB[ p.choices[1].id ]; 
+          // } 
 
-	//         // redefine p and q during the iterative process
-  //         p = _DB[q.choices[q.choices.length - 1 ].id];
-  //         if(_.isUndefined(p.choices[1]) || p.choices.length == 0){
-  //           q = _DB[ p.choices[0].id ];
-  //         } else {
-  //           q = _DB[ p.choices[1].id ]; 
-  //         } 
+          // let stability2 = stablilityCheck();
+          // if(!stability2.stable) {
+          //   throw new StabilityException(stability2);
+          // }
 
-  //         let stability2 = stablilityCheck();
-  //         if(!stability2.stable) {
-  //           throw new StabilityException(stability2);
-  //         }
+          let newPair = List([p,q]);
 
-  //         let newPair = [p,q];
+	        // look for a cycle in cyclePairs before pushing into it, check the new p to see if its reoccured
+          
+          let spotCycle = cyclePairs.find(pair => {return pair.get(0).get('id') === p.get('id')})
+          cyclePairs = cyclePairs.push(newPair);
 
-	//         // look for a cycle in cyclePairs before pushing into it, check the new p to see if its reoccured
-  //         let spotCycle = _.findIndex(cyclePairs, (pair) => { return pair[0].id == p.id; });
-  //         cyclePairs.push(newPair);
+	        // there was a cycle found, go through with the diagnal elimination phase
+          if (spotCycle) {
+            cycle = true;
+  	        // cycle pairs should start where the cycle was found
+            // cyclePairs.splice(0,spotCycle);
+            self._eliminateDiagnals(cyclePairs);
 
-	//         // there was a cycle found, go through with the diagnal elimination phase
-  //         if ( spotCycle != -1 ) {
-  //           cycle = true;
-  // 	        // cycle pairs should start where the cycle was found
-  //           cyclePairs.splice(0,spotCycle);
-  //           eliminateDiagnals(cyclePairs);
+            // let stability3 = stablilityCheck();
+            // if(!stability3.stable) {
+            //   throw new StabilityException(stability3);
+            // }
+          }
+        };	
+      }	else {
+        //   let stabilityFinal = stablilityCheck();
+        //   if(!stabilityFinal.stable) {
+        //     throw new StabilityException(stabilityFinal);
+        //   }
+        allMatched = true;
+      }	
+    }
+  }
 
-  //           let stability3 = stablilityCheck();
-  //           if(!stability3.stable) {
-  //             throw new StabilityException(stability3);
-  //           }
-  //         }
-  //       };	
-  //     }	else {
-  //       let stabilityFinal = stablilityCheck();
-  //         if(!stabilityFinal.stable) {
-  //           throw new StabilityException(stabilityFinal);
-  //         }
-  //       allMatched = true;
-  //     }	
-  //   };
-
-  //   // loop condition looking for persons who have multiple remaining preferences
-  //   _indexWithMultipleRemain() {
-  //     let start = false;
-  //     _.forIn(_DB, (person,key) => {
-  //       if( person.choices.length > 1 ) {
-  //         start = (start != false) ? start : key;
-  //       }
-  //     });
-  //     return start;
-  //   }
-
-  //   // deletes prefences that resulted in the diagnal pattern found above
-  //   _eliminateDiagnals(pairs) {
-  //     // start at second element for diagnal rejection
-  //     for(let i = 1; i < pairs.length; i++) {
-	// // the [i - 1][1] creates the diagnal effect
-  //       eliminateChoices(_DB[pairs[i][0].id],_DB[pairs[i - 1][1].id]);
-  //     }
-  //   }
+  // deletes prefences that resulted in the diagnal pattern found above
+  _eliminateDiagnals(pairs) {
+    let self = this;
+    // start at second element for diagnal rejection
+    console.log("======------------->>>>")
+    pairs.map((p,i) => {
+      if(i < pairs.size - 1) {
+        console.log("DELETING:: ", p.get(1).get('id'),pairs.get(i+1).get(0).get('id'))
+        self._eliminateSymmetrically(p.get(1),pairs.get(i+1).get(0))
+      } else {
+        console.log("<<<--------==========")
+        console.log(p)
+      }
+    })
+  }
 
 
 
@@ -341,17 +346,16 @@ class StableMatchRedux {
    * Eliminates two people from each others preference list
    * Shared throughout
    * 
-   * @access private
    */
   _eliminateSymmetrically(sender,receiver) {
     this.__dispatch__(GLOBALS.dispatchEliminateSenderPref(this.__demoType__,sender,receiver));
     this.parsedData = this.parsedData.withMutations(data => {
       data
         .set(sender.get('id'), 
-          sender
+          data.get(sender.get('id'))
             .deleteIn(['prefs', sender.get('prefs').findKey(p=>{return p.get('id') == receiver.get('id')})]))
         .set(receiver.get('id'), 
-          receiver
+          data.get(receiver.get('id'))
             .deleteIn(['prefs', receiver.get('prefs').findKey(p=>{return p.get('id') == sender.get('id')})]))
     });
   }

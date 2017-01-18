@@ -8,10 +8,11 @@ import StableMatchRedux from './utils/stableMatchRedux';
  */
 export function runFullDemo(data) {
   return dispatch => {
-    
+
     let smx = new StableMatchRedux(null,data,dispatch,'fullDemo');
     smx.proposalStage();
     smx.eliminateStage();
+    smx.cycleReduceStage();
 
     // let sm = new StableMatch(null,fullDemoData);
     // 
