@@ -31,6 +31,10 @@ p {
   font-family: 'Overpass', sans-serif !important;
   color: #4F5A65; }
 
+.github-fork-ribbon:after,
+.github-fork-ribbon:before {
+  background-color: #4F5A65; }
+
 .App {
   margin: 25px; }
 

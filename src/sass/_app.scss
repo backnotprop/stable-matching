@@ -19,6 +19,11 @@ p {
   color: $subText;
 }
 
+.github-fork-ribbon:after,
+.github-fork-ribbon:before {
+  background-color: $subText;
+}
+
 .App {
   margin: 25px;
 }

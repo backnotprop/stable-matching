@@ -16,6 +16,11 @@ npm start
 ```
 
 ## Roadmap
+- [ ] Clean up code
+
+--
+
+
 - [ ] Incorporate blog
   - [ ] Credits and intro
   - [ ] Stage One Blog & Demo
@@ -28,7 +33,6 @@ npm start
 - [ ] Better UX
   - [ ] Speed slider
   - [ ] Tooltips
-  - [ ] Log?
   - [ ] Log?
 
 

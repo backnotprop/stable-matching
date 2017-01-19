@@ -12,6 +12,7 @@ class App extends Component {
 
     return (
       <div className="App App-gradient">
+        <a className="github-fork-ribbon" href="https://github.com/mdramos/stable-matching" title="Fork me on GitHub">Fork me on GitHub</a>
         <header className="App-header">
           <div className="App-title"><h1>Stable Matching</h1><p><em>the stable roomate problem</em></p></div>
         </header>
