@@ -2,7 +2,7 @@
 
 Stable Roommate Problem implemented in Javascript, interactive UI
 
-[Also in Java](https://github.com/mdramos/stable-matching-java)
+[Demo](http://ramos.codes/stable-matching/)  [Also in Java](https://github.com/mdramos/stable-matching-java)
 
 
 ## Getting Started
