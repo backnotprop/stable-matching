@@ -142,7 +142,6 @@ function dataReducer(state,action) {
     })      
   }
   case CREATE_FINAL_MATCHING: {
-    console.log(action)
     let stateSender = state.get(action.sender.get('id'));
     let stateReceiver = state.get(action.receiver.get('id'));
     return state.withMutations(s => {
